@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Combined configuration validation and database setup for SQL Control Manager.
+Combined configuration validation and database setup for ethopy control.
 This script validates configuration, tests database connectivity, and optionally initializes the database.
 """
 
@@ -41,22 +41,22 @@ def get_database_config():
     """Interactively get database configuration from user."""
     print("\n📋 Database Configuration")
     print("Please provide your database connection details:")
-    
+
     db_host = get_input("Database host", "127.0.0.1")
     db_port = get_input("Database port", "3306")
     db_name = get_input("Database name", "lab_experiments")
     db_user = get_input("Database username")
-    
+
     while not db_user:
         print("❌ Database username is required!")
         db_user = get_input("Database username")
-    
+
     db_password = get_input("Database password", password=True)
-    
+
     while not db_password:
         print("❌ Database password is required!")
         db_password = get_input("Database password", password=True)
-    
+
     return db_host, db_port, db_name, db_user, db_password
 
 
@@ -64,19 +64,19 @@ def get_ssh_config():
     """Interactively get SSH configuration from user."""
     print("\n🔐 SSH Configuration (for remote reboot functionality)")
     use_ssh = get_input("Do you need SSH remote reboot functionality? (y/N)", "n")
-    
-    if use_ssh.lower() == 'y':
+
+    if use_ssh.lower() == "y":
         ssh_user = get_input("SSH username")
         ssh_password = get_input("SSH password", password=True)
-        
+
         while not ssh_user:
             print("❌ SSH username is required!")
             ssh_user = get_input("SSH username")
-        
+
         while not ssh_password:
             print("❌ SSH password is required!")
             ssh_password = get_input("SSH password", password=True)
-        
+
         return ssh_user, ssh_password
     else:
         return "your_ssh_username", "your_ssh_password"
@@ -86,9 +86,11 @@ def get_auth_config():
     """Get authentication configuration."""
     print("\n🔒 Authentication Configuration")
     use_ldap = get_input("Do you want to use LDAP authentication? (y/N)", "n")
-    
-    if use_ldap.lower() == 'y':
-        print("LDAP configuration will be set to defaults. Edit .env file for detailed LDAP setup.")
+
+    if use_ldap.lower() == "y":
+        print(
+            "LDAP configuration will be set to defaults. Edit .env file for detailed LDAP setup."
+        )
         return "false", "true"
     else:
         return "true", "false"
@@ -98,33 +100,35 @@ def get_admin_config():
     """Get admin user configuration."""
     print("\n👤 Admin User Configuration")
     admin_username = get_input("Admin username", "admin")
-    admin_password = get_input("Admin password (leave empty for auto-generation)", password=True)
-    
+    admin_password = get_input(
+        "Admin password (leave empty for auto-generation)", password=True
+    )
+
     return admin_username, admin_password
 
 
 def create_env_file():
     """Create .env file with interactive input."""
     env_path = Path(".env")
-    
+
     if env_path.exists():
         print("❌ .env file already exists!")
         response = get_input("Do you want to overwrite it? (y/N)", "n")
-        if response.lower() != 'y':
+        if response.lower() != "y":
             print("Environment setup cancelled.")
             return False
-    
+
     # Get configuration interactively
     db_host, db_port, db_name, db_user, db_password = get_database_config()
     ssh_user, ssh_password = get_ssh_config()
     use_local_auth, use_ldap_auth = get_auth_config()
     admin_username, admin_password = get_admin_config()
-    
+
     # Generate secure secret key
     secret_key = generate_secret_key()
-    
-    env_content = f"""# SQL Control Manager Environment Variables
-# Generated interactively for user: {os.environ.get('USER', 'system')}
+
+    env_content = f"""# ethopy control Environment Variables
+# Generated interactively for user: {os.environ.get("USER", "system")}
 
 # Flask Configuration
 SECRET_KEY={secret_key}
@@ -157,18 +161,20 @@ LDAP_GROUP_DN=ou=groups
 ADMIN_USERNAME={admin_username}
 ADMIN_PASSWORD={admin_password}
 """
-    
+
     try:
-        with open(env_path, 'w') as f:
+        with open(env_path, "w") as f:
             f.write(env_content)
-        
+
         print("\n✅ .env file created successfully!")
-        
+
         if use_ldap_auth == "true":
-            print("\n⚠️  LDAP Note: Please edit the .env file to configure your LDAP settings.")
-        
+            print(
+                "\n⚠️  LDAP Note: Please edit the .env file to configure your LDAP settings."
+            )
+
         return True
-        
+
     except Exception as e:
         print(f"❌ Error creating .env file: {e}")
         return False
@@ -180,11 +186,13 @@ def check_env_file():
     if not env_path.exists():
         print("❌ .env file not found!")
         print("\nWould you like to create the .env file interactively now?")
-        print("This will guide you through setting up database, SSH, and admin credentials.")
-        
+        print(
+            "This will guide you through setting up database, SSH, and admin credentials."
+        )
+
         create_now = get_input("Create .env file now? (Y/n)", "y")
-        
-        if create_now and create_now.lower() in ['y', 'yes']:
+
+        if create_now and create_now.lower() in ["y", "yes"]:
             print("\n🔧 Starting interactive environment setup...")
             return create_env_file()
         else:
@@ -334,7 +342,7 @@ def run_database_initialization():
 
         # Check if users already exist before showing admin creation section
         from models import User
-        
+
         try:
             with app.app_context():
                 from sqlalchemy import text
@@ -344,14 +352,16 @@ def run_database_initialization():
                     result = conn.execute(text("SHOW TABLES LIKE 'users'"))
                     if not result.fetchone():
                         print("❌ User table does not exist!")
-                        print("🔍 This indicates table creation failed. Check the logs above.")
+                        print(
+                            "🔍 This indicates table creation failed. Check the logs above."
+                        )
                         return False
 
                 # Now check existing users
                 existing_users = User.query.count()
                 if existing_users > 0:
                     print(f"\nℹ️  Database already contains {existing_users} user(s)")
-                    
+
                     # Show existing users (usernames only)
                     users = User.query.all()
                     print("Existing users:")
@@ -359,7 +369,9 @@ def run_database_initialization():
                         admin_status = " (admin)" if user.is_admin else ""
                         print(f"  • {user.username}{admin_status}")
 
-                    print("\n✅ Database already has users - no admin user creation needed!")
+                    print(
+                        "\n✅ Database already has users - no admin user creation needed!"
+                    )
                     return True
 
         except Exception as e:
@@ -440,7 +452,7 @@ def run_database_initialization():
 
 def main():
     """Main setup function."""
-    print_header("SQL Control Manager - Configuration Validation & Database Setup")
+    print_header("ethopy control - Configuration Validation & Database Setup")
     print("""
 This script will:
 1. Validate your configuration settings
@@ -466,7 +478,7 @@ This script will:
         return False
 
     print_header("Setup Completed Successfully!")
-    print("Your SQL Control Manager is ready to use!")
+    print("Your ethopy control is ready to use!")
 
     return True
 
