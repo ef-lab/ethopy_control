@@ -189,31 +189,6 @@ pip install -e .[test]     # Testing dependencies only
 pip install -e .[docs]     # Documentation dependencies only
 ```
 
-### Available Console Scripts
-
-After installation with `pip install -e .`, you can use these commands:
-
-```bash
-setup-env        # Generate secure environment configuration
-validate-config  # Validate current configuration
-init-db          # Initialize database and create admin user
-```
-
-**Note:** The refactored architecture provides these direct commands:
-- `python3 main.py` - Start the application (primary entry point)
-- `python3 setup.py` - Interactive database setup with validation
-- `python3 init_db.py` - Standalone database initialization
-- `python3 config.py` - Configuration validation and testing
-- `python3 setup_env.py` - Environment variable template generation
-
-## Getting Help
-
-1. **Configuration issues:** Run `validate-config` or `python3 config.py`
-2. **Missing environment variables:** Run `setup-env` or `python3 setup_env.py`
-3. **Database problems:** Verify connection settings in your `.env`
-4. **Development setup:** Follow the detailed development setup guide above
-5. **Installation issues:** Ensure you're using `pip install .` instead of requirements.txt
-
 ## 📄 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
