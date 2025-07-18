@@ -388,7 +388,7 @@ def reboot_setup(setup):
         # Get SSH credentials from environment variables
         ssh_username = os.environ.get("SSH_USERNAME")
         ssh_password = os.environ.get("SSH_PASSWORD")
-        
+
         if not ssh_username or not ssh_password:
             return jsonify({"error": "SSH credentials not configured"}), 500
 
@@ -713,7 +713,7 @@ def get_activity_data():
             get_recent_proximity_events,
             get_port_config_types,
             get_control_entry_details,
-            get_recent_trial_states
+            get_recent_trial_states,
         )
 
         setup_id = request.args.get("setup")
@@ -750,9 +750,7 @@ def get_activity_data():
             animal_id, session, time_window, proximity_ports
         )
 
-        trial_events = get_recent_trial_states(
-            animal_id, session, time_window
-        )
+        trial_events = get_recent_trial_states(animal_id, session, time_window)
         # Format data for response - ensure all values are JSON serializable
         formatted_data = {
             "lick_events": [],
@@ -803,7 +801,7 @@ def get_activity_data():
                     {
                         "ms_time": event["time"],
                         "time": event["real_time"].isoformat(),
-                        "trial_idx": trial_idx
+                        "trial_idx": trial_idx,
                     }
                 )
         # print("formatted_data ", formatted_data)
