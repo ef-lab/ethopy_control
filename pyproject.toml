@@ -7,7 +7,7 @@ name = "ethopy_control"
 version = "0.1.0"
 description = "A Flask-based application for managing laboratory experiments and device control"
 readme = "README.md"
-requires-python = ">=3.11"
+requires-python = ">=3.9"
 license = {text = "MIT"}
 authors = [
     {name = "SQL Control Manager Team"},
@@ -18,8 +18,8 @@ classifiers = [
     "Intended Audience :: Science/Research",
     "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.11",
-    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
     "Framework :: Flask",
     "Topic :: Scientific/Engineering",
     "Topic :: System :: Monitoring",
@@ -75,10 +75,10 @@ setup-env = "utils.setup_env:main"
 validate-config = "utils.config:main"
 
 [project.urls]
-Homepage = "https://github.com/yourusername/SqlControlManager"
-Repository = "https://github.com/yourusername/SqlControlManager"
-Issues = "https://github.com/yourusername/SqlControlManager/issues"
-Documentation = "https://github.com/yourusername/SqlControlManager/tree/main/docs"
+Homepage = "https://github.com/ef-lab/ethopy_control/"
+Repository = "https://github.com/ef-lab/ethopy_control"
+Issues = "https://github.com/ef-lab/ethopy_control/issues"
+Documentation = "https://github.com/ef-lab/ethopy_control/tree/main/docs"
 
 [tool.setuptools.packages.find]
 where = ["."]
