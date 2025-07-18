@@ -1,6 +1,10 @@
 # Ethopy Control
+[![Documentation](https://img.shields.io/badge/docs-available-brightgreen.svg)](https://ef-lab.github.io/ethopy_control/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 A Flask-based application for managing laboratory experiments and device control.
+
+👉 [Documentation](https://ef-lab.github.io/ethopy_package/)
 
 ## Quick Start
 
@@ -96,6 +100,17 @@ ethopy_control/
     ├── setup.md          # This setup guide
     └── mkdocs.yml        # Documentation configuration
 ```
+
+## User Interface
+
+### Control Table Interface
+![Control Table](docs/images/control.png)
+
+### Task Management Interface  
+![Task Management](docs/images/tasks.png)
+
+### Real-time Data Visualization
+![Real-time Plot](docs/images/real_time_plot.png)
 
 ## Core Features
 
