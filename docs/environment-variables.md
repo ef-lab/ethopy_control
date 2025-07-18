@@ -1,6 +1,6 @@
 # Environment Variables Configuration
 
-The SQL Control Manager requires specific environment variables to be set. **The application will refuse to start** without the required security-critical variables.
+The ethopy control requires specific environment variables to be set. **The application will refuse to start** without the required security-critical variables.
 
 ## Required Variables
 

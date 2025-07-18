@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Main entry point for SQL Control Manager.
+Main entry point for ethopy control.
 This is the primary way to start the application.
 """
 
@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 
 def main():
     """Main application entry point."""
-    logger.info("Starting SQL Control Manager...")
+    logger.info("Starting ethopy control...")
 
     # Validate database connection before starting the server
     logger.info("Validating database connection...")

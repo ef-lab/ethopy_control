@@ -1,6 +1,6 @@
 # User Management
 
-The SQL Control Manager now includes a local user management system that allows administrators to create, edit, and delete users directly within the application.
+The ethopy control now includes a local user management system that allows administrators to create, edit, and delete users directly within the application.
 
 ## User Types
 

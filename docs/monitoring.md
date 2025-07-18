@@ -2,7 +2,7 @@
 
 ## Setup Activity Monitoring
 
-The Control Table Monitor includes features to help you monitor the activity and health of your setups.
+The Ethopy Control includes features to help you monitor the activity and health of your setups.
 
 ### Last Ping Monitoring
 

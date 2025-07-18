@@ -52,7 +52,6 @@ This interactive script will:
 - Admin user configuration
 
 **⚠️ Security Notes:**
-- Uses auto-generated secure SECRET_KEY
 - Never commit .env files to version control
 - Store credentials securely (password manager recommended)
 
@@ -338,11 +337,11 @@ volumes:
 
 ```bash
 # Build production image
-docker build -t sql-control-manager .
+docker build -t ethopy-control .
 
 # Run production container
 docker run -d \
-  --name sql-control-manager \
+  --name ethopy-control \
   -p 5000:5000 \
   -e SECRET_KEY="your-production-secret" \
   -e DB_HOST="your-db-host" \
@@ -353,7 +352,7 @@ docker run -d \
   -e ADMIN_USERNAME="admin" \
   -e ADMIN_PASSWORD="your-admin-password" \
   -e FLASK_CONFIG="production" \
-  sql-control-manager
+  ethopy-control
 
 # Run with Docker Compose (development)
 docker-compose up -d
@@ -373,7 +372,7 @@ Create a `.env.docker` file for container environment variables:
 DB_HOST=mysql
 DB_PORT=3306
 DB_NAME=lab_experiments
-DB_USER=sqlcontrol
+DB_USER=ethopycontrol
 DB_PASSWORD=secure_password
 
 # Application Configuration

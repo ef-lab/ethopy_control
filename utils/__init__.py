@@ -1,4 +1,4 @@
 """
-Utilities package for SQL Control Manager.
+Utilities package for ethopy control.
 Contains setup, configuration, and database initialization utilities.
 """

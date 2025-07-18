@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Database initialization module for SQL Control Manager.
+Database initialization module for ethopy control.
 Handles database table creation and admin user setup.
 """
 
@@ -244,7 +244,7 @@ def main():
         from app import app, db
 
         logger.info("=" * 60)
-        logger.info("SQL Control Manager - Database Initialization")
+        logger.info("ethopy control - Database Initialization")
         logger.info("=" * 60)
 
         # Validate configuration first

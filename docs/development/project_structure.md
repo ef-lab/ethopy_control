@@ -1,6 +1,6 @@
 # Project Structure
 
-This document provides an overview of the SQL Control Manager project structure to help you understand how the codebase is organized.
+This document provides an overview of the ethopy control project structure to help you understand how the codebase is organized.
 
 ## Directory Overview
 

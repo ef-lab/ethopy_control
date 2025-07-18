@@ -10,7 +10,7 @@ readme = "README.md"
 requires-python = ">=3.9"
 license = {text = "MIT"}
 authors = [
-    {name = "SQL Control Manager Team"},
+    {name = "ethopy control Team"},
 ]
 keywords = ["flask", "laboratory", "experiments", "control", "monitoring", "real-time"]
 classifiers = [
