@@ -1,0 +1,40 @@
+site_name: Monitor Experiments
+theme:
+  name: material
+  features:
+    - navigation.instant
+    - navigation.tracking
+    - navigation.tabs
+    - navigation.sections
+    - navigation.expand
+    - toc.integrate
+  palette:
+    - scheme: slate
+      primary: teal
+      accent: indigo
+      toggle:
+        icon: material/toggle-switch
+        name: Switch to light mode
+    - scheme: default
+      primary: teal
+      accent: indigo
+      toggle:
+        icon: material/toggle-switch-off-outline
+        name: Switch to dark mode
+  favicon: assets/favicon.png
+  logo: assets/favicon.png
+
+nav:
+  - Home: index.md
+  - Getting Started:
+    - Setup Guide: setup.md
+    - User Management: user_management.md
+    - Monitoring and Control: monitoring.md  
+    - Activity Monitor: activity_monitor.md
+  - API Reference:
+    - Endpoints: api/endpoints.md
+    - Models: api/models.md
+  - Development:
+    - Project Structure: development/project_structure.md
+    - Testing: development/testing.md
+    - Contributing: development/contributing.md

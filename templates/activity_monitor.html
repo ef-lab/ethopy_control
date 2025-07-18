@@ -1,0 +1,472 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <h2>Real-time Animal Activity Monitor</h2>
+    </div>
+    <div class="col-auto">
+        <button id="refreshButton" class="btn btn-blue">
+            <i class="fas fa-sync-alt"></i> Refresh
+        </button>
+    </div>
+</div>
+
+<!-- Configuration panel - moved to top of page -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Configuration</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-4 mb-3">
+                        <label for="setupSelector" class="form-label">Select Setup:</label>
+                        <select id="setupSelector" class="form-select">
+                            {% for setup in setups %}
+                            <option value="{{ setup.setup }}">{{ setup.setup }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label">Time Window:</label>
+                        <div class="btn-group w-100" role="group">
+                            <input type="radio" class="btn-check" name="timeWindow" id="time30" value="30" autocomplete="off">
+                            <label class="btn btn-outline-primary" for="time30">30s</label>
+                            
+                            <input type="radio" class="btn-check" name="timeWindow" id="time60" value="60" autocomplete="off" checked>
+                            <label class="btn btn-outline-primary" for="time60">60s</label>
+                            
+                            <input type="radio" class="btn-check" name="timeWindow" id="time300" value="300" autocomplete="off">
+                            <label class="btn btn-outline-primary" for="time300">5m</label>
+                            
+                            <input type="radio" class="btn-check" name="timeWindow" id="timeAll" value="all" autocomplete="off">
+                            <label class="btn btn-outline-primary" for="timeAll">All</label>
+                        </div>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label">Update Plot:</label>
+                        <div class="d-flex gap-2">
+                            <button id="startButton" class="btn btn-bluish-green flex-grow-1">
+                                <i class="fas fa-play"></i> Start
+                            </button>
+                            <button id="stopButton" class="btn btn-vermillion flex-grow-1">
+                                <i class="fas fa-stop"></i> Stop
+                            </button>
+                        </div>
+                        <div id="updateStatus" class="alert alert-vermillion mt-2 mb-0">
+                            Updates: <span id="updateStatusText">Paused</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-12">
+        <!-- Session Information panel -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">Session Information</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-3 mb-3">
+                        <label class="form-label fw-bold">Animal ID:</label>
+                        <div id="animalId">-</div>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <label class="form-label fw-bold">Session:</label>
+                        <div id="sessionNumber">-</div>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <label class="form-label fw-bold">Current State:</label>
+                        <div id="trialState">-</div>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <label class="form-label fw-bold">Status:</label>
+                        <div id="trialStatus">-</div>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <label class="form-label fw-bold">Trials:</label>
+                        <div id="trialCount">-</div>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <label class="form-label fw-bold">Total Liquid:</label>
+                        <div id="totalLiquid">-</div>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <label class="form-label fw-bold">Difficulty:</label>
+                        <div id="difficulty">-</div>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <label class="form-label fw-bold">Last Ping:</label>
+                        <div id="lastPing">-</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Plot -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0" id="plotTitle">Activity Plot</h5>
+            </div>
+            <div class="card-body">
+                <div id="activityPlot" style="height: 400px;"></div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+<script>
+    let updateInterval = null;
+    let updateActive = true;
+    let currentSetup = '';
+    let currentTimeWindow = '60';
+    let autoRefreshStartTime = null; // Add this at the top with other let declarations
+    
+    // Format time since last ping
+    function formatTimeSince(seconds) {
+        if (seconds === null || isNaN(seconds)) return 'Unknown';
+        
+        if (seconds < 60) {
+            return `${Math.floor(seconds)}s ago`;
+        } else if (seconds < 3600) {
+            const minutes = Math.floor(seconds / 60);
+            const secs = Math.floor(seconds % 60);
+            return `${minutes}m ${secs}s ago`;
+        } else {
+            const hours = Math.floor(seconds / 3600);
+            const minutes = Math.floor((seconds % 3600) / 60);
+            return `${hours}h ${minutes}m ago`;
+        }
+    }
+    
+// Update session info panel
+    function updateSessionInfo(data) {
+        const controlData = data.control_data || {};
+        
+        // Update the session info panel
+        $('#animalId').text(controlData.animal_id !== undefined ? controlData.animal_id : '-');
+        $('#sessionNumber').text(controlData.session !== undefined ? controlData.session : '-');
+        $('#trialState').text(controlData.state || '-');
+        $('#trialStatus').text(controlData.status || '-');
+        $('#trialCount').text(controlData.trials !== undefined ? controlData.trials : '-');
+        $('#totalLiquid').text(controlData.total_liquid !== undefined ? `${controlData.total_liquid} μL` : '-');
+        $('#difficulty').text(controlData.difficulty !== undefined ? controlData.difficulty : '-');
+        
+        const lastPingSeconds = controlData.last_ping_seconds;
+        $('#lastPing').text(lastPingSeconds !== undefined ? formatTimeSince(lastPingSeconds) : '-');
+        
+        // Update plot title
+        let title = `Activity Monitor - Setup: ${currentSetup}`;
+        if (controlData.state) title += ` - State: ${controlData.state}`;
+        if (controlData.status) title += ` - Status: ${controlData.status}`;
+        $('#plotTitle').text(title);
+    }
+    
+    // Create or update the plot with new data
+    function updatePlot(data) {
+        if (!data) return;
+        
+        // Update session info
+        updateSessionInfo(data);
+        
+        // Extract all ports for y-axis
+        const allPorts = new Set();
+        data.lick_events.forEach(event => allPorts.add(`lick_${event.port}`));
+        data.proximity_events.forEach(event => allPorts.add(`proximity_${event.port}`));
+        
+        // Create sorted list of ports for consistent y-positions
+        const sortedPorts = Array.from(allPorts).sort();
+        const portPositions = {};
+        sortedPorts.forEach((port, index) => {
+            portPositions[port] = index + 1;
+        });
+        
+        // Prepare data for lick events
+        const lickTimes = [];
+        const lickPositions = [];
+        const lickTexts = [];
+        
+        data.lick_events.forEach(event => {
+            lickTimes.push(new Date(event.time));
+            lickPositions.push(portPositions[`lick_${event.port}`]);
+            lickTexts.push(`Lick Port ${event.port}`);
+        });
+        
+        // Prepare data for proximity events
+        const proximityTimes = [];
+        const proximityPositions = [];
+        const proximityTexts = [];
+        const proximityColors = [];
+        const inPositionValues = [];
+        
+        data.proximity_events.forEach(event => {
+            proximityTimes.push(new Date(event.time));
+            proximityPositions.push(portPositions[`proximity_${event.port}`]);
+            proximityTexts.push(`Proximity Port ${event.port}`);
+            proximityColors.push(event.in_position ? '#009E73' : '#D55E00'); // Bluish green and Vermillion
+            inPositionValues.push(event.in_position ? 'Yes' : 'No');
+        });
+        
+        // Calculate time range for x-axis
+        const currentTime = new Date();
+        let xStart, xEnd;
+        
+        if (currentTimeWindow !== 'all') {
+            const secondsWindow = parseInt(currentTimeWindow);
+            xStart = new Date(currentTime - secondsWindow * 1000);
+            xEnd = new Date(currentTime.getTime() + 2000); // add 2 seconds buffer
+        } else {
+            // Use the actual data range if showing all data
+            const allTimes = [...lickTimes, ...proximityTimes];
+            if (allTimes.length > 0) {
+                xStart = new Date(Math.min(...allTimes) - 5000); // 5 seconds before first event
+                xEnd = new Date(Math.max(...allTimes) + 5000); // 5 seconds after last event
+            } else {
+                xStart = new Date(currentTime - 60000); // default to last 60 seconds
+                xEnd = currentTime;
+            }
+        }
+        
+        // Create the tick values and labels for the y-axis
+        const tickVals = Object.values(portPositions);
+        const tickText = Object.keys(portPositions).map(port => {
+            const [type, num] = port.split('_');
+            return `${type.charAt(0).toUpperCase() + type.slice(1)} Port ${num}`;
+        });
+        
+        // Create the plot traces
+        const traces = [];
+        
+        // Add lick events trace
+        if (lickTimes.length > 0) {
+            traces.push({
+                x: lickTimes,
+                y: lickPositions,
+                mode: 'markers',
+                type: 'scatter',
+                name: 'Lick Events',
+                marker: {
+                    symbol: 'circle',
+                    size: 12,
+                    color: 'blue',
+                    opacity: 0.5
+                },
+                text: lickTexts,
+                hovertemplate: '%{text}<br>Time: %{x}<extra></extra>'
+            });
+        }
+        
+        // Add proximity events trace
+        if (proximityTimes.length > 0) {
+            traces.push({
+                x: proximityTimes,
+                y: proximityPositions,
+                mode: 'markers',
+                type: 'scatter',
+                name: 'Proximity Events',
+                marker: {
+                    symbol: 'square',
+                    size: 12,
+                    color: proximityColors,
+                    opacity: 0.5
+                },
+                text: proximityTexts,
+                customdata: inPositionValues,
+                hovertemplate: '%{text}<br>Time: %{x}<br>In Position: %{customdata}<extra></extra>'
+            });
+        }
+        
+        // Process state events and create vertical lines for trial states
+        const trialLineColor = 'rgba(128,128,128,0.3)'; // Gray with small opacity
+
+        // Create vertical lines for each state event
+        if (Array.isArray(data.trial_events) && data.trial_events.length > 0) {
+            data.trial_events.forEach(event => {
+                const eventTime = new Date(event.time);
+
+                // Only add the line if it's within our time window
+                if (eventTime >= xStart && eventTime <= xEnd) {
+                    // Create vertical line for this state event
+                    console.log('eventTime:',eventTime);
+                    traces.push({
+                        x: [eventTime, eventTime],
+                        y: [0, tickVals.length + 0.5],
+                        mode: 'lines',
+                        type: 'scatter',
+                        name: 'Trials',
+                        line: {
+                            color: trialLineColor,
+                            width: 2,
+                            dash: 'solid'
+                        },
+                        hovertemplate: `Trial ${event.trial_idx}<br>Time: %{x}<extra></extra>`,
+                        showlegend: false, // We'll add one legend entry manually
+                        legendgroup: 'trial_events'
+                    });
+                }
+            });
+            
+            // Add one legend entry for all trial state lines
+            traces.push({
+                x: [null],
+                y: [null],
+                mode: 'lines',
+                type: 'scatter',
+                name: 'Trials',
+                line: {
+                    color: trialLineColor,
+                    width: 2
+                },
+                showlegend: true,
+                legendgroup: 'trial_events'
+            });
+        }
+        
+        // Define the layout
+        const layout = {
+            xaxis: {
+                title: 'Time',
+                range: [xStart, xEnd],
+                gridcolor: '#e0e0e0',
+                type: 'date'
+            },
+            yaxis: {
+                title: 'Port',
+                tickvals: tickVals,
+                ticktext: tickText,
+                range: [0, tickVals.length + 0.5],
+                gridcolor: '#e0e0e0'
+            },
+            plot_bgcolor: 'white',
+            paper_bgcolor: 'white',
+            margin: { t: 10, l: 80, r: 10, b: 50 },
+            height: 400,
+            legend: {
+                orientation: 'h',
+                yanchor: 'bottom',
+                y: 1.02,
+                xanchor: 'center',
+                x: 0.5
+            }
+        };
+        
+        // Create new plot or update existing one
+        Plotly.react('activityPlot', traces, layout);
+    }
+
+    // Fetch activity data from the server
+    function fetchActivityData() {
+        $.ajax({
+            url: '/api/activity-data',
+            method: 'GET',
+            data: {
+                setup: currentSetup,
+                time_window: currentTimeWindow
+            },
+            success: function(data) {
+                updatePlot(data);
+            },
+            error: function(xhr) {
+                const error = xhr.responseJSON?.error || 'Failed to fetch activity data';
+                console.error(error);
+                showNotification(error, 'error');
+                
+                // Update empty plot on error
+                updatePlot({
+                    lick_events: [],
+                    proximity_events: [],
+                    state_events: [],
+                    control_data: { setup: currentSetup }
+                });
+            }
+        });
+    }
+    
+    function startAutoRefresh() {
+        stopAutoRefresh(); // Clear any existing interval
+        updateActive = true;
+        autoRefreshStartTime = Date.now(); // Track when auto-refresh started
+        updateInterval = setInterval(function() {
+            fetchActivityData();
+            // Check if 5 minutes have passed
+            if (autoRefreshStartTime && (Date.now() - autoRefreshStartTime > 300000)) {
+                stopAutoRefresh();
+                showNotification('Auto-refresh stopped after 5 minutes.', 'error');
+            }
+        }, 1000);
+        $('#updateStatus').removeClass('alert-vermillion').addClass('alert-success');
+        $('#updateStatusText').text('Running');
+    }
+
+    function stopAutoRefresh() {
+        updateActive = false;
+        autoRefreshStartTime = null; // Reset timer
+        if (updateInterval) {
+            clearInterval(updateInterval);
+            updateInterval = null;
+        }
+        $('#updateStatus').removeClass('alert-success').addClass('alert-vermillion');
+        $('#updateStatusText').text('Paused');
+    }
+    
+    // Show notification
+    function showNotification(message, type) {
+        Toastify({
+            text: message,
+            duration: 3000,
+            gravity: "top",
+            position: 'right',
+            backgroundColor: type === 'success' ? '#009E73' : '#D55E00', // Bluish green and Vermillion
+            stopOnFocus: true
+        }).showToast();
+    }
+    
+    $(document).ready(function() {
+        // Initialize with the first setup in the list
+        currentSetup = $('#setupSelector').val();
+        
+        // Set up event handlers
+        $('#setupSelector').change(function() {
+            currentSetup = $(this).val();
+            fetchActivityData();
+        });
+        
+        $('input[name="timeWindow"]').change(function() {
+            currentTimeWindow = $(this).val();
+            fetchActivityData();
+        });
+        
+        $('#refreshButton').click(function() {
+            fetchActivityData();
+        });
+        
+        $('#startButton').click(function() {
+            startAutoRefresh();
+        });
+        
+        $('#stopButton').click(function() {
+            stopAutoRefresh();
+        });
+        
+        // Create empty plot initially
+        updatePlot({
+            lick_events: [],
+            proximity_events: [],
+            control_data: { setup: currentSetup }
+        });
+        
+        // Fetch initial data
+        fetchActivityData();
+    });
+</script>
+{% endblock %} 

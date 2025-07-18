@@ -1,0 +1,153 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ethopy_control"
+version = "0.1.0"
+description = "A Flask-based application for managing laboratory experiments and device control"
+readme = "README.md"
+requires-python = ">=3.11"
+license = {text = "MIT"}
+authors = [
+    {name = "SQL Control Manager Team"},
+]
+keywords = ["flask", "laboratory", "experiments", "control", "monitoring", "real-time"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Framework :: Flask",
+    "Topic :: Scientific/Engineering",
+    "Topic :: System :: Monitoring",
+]
+
+dependencies = [
+    # Core Flask Application
+    "flask>=2.3.3,<3.0",
+    "flask-sqlalchemy>=3.1.1",
+    "flask-ldap3-login>=0.9.16",
+    "werkzeug>=3.0.0",
+    
+    # Database
+    "sqlalchemy>=2.0.38",
+    "pymysql>=1.1.1",
+    
+    # Security and Authentication
+    "cryptography>=42.0.5",
+    
+    # Configuration
+    "python-dotenv>=1.0.0",
+    
+    # SSH and Remote Operations
+    "paramiko>=3.3.1",
+    
+    # Real-time Data Visualization
+    "dash>=2.18.0",
+    "plotly>=5.18.0",
+    
+    # Server and Deployment
+    "gunicorn>=23.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.3.4",
+    "pytest-cov>=6.0.0",
+    "black>=23.0.0",
+    "flake8>=6.0.0",
+    "mypy>=1.0.0",
+]
+docs = [
+    "mkdocs>=1.6.1",
+    "mkdocs-material>=9.6.5",
+]
+test = [
+    "pytest>=8.3.4",
+    "pytest-cov>=6.0.0",
+]
+
+[project.scripts]
+setup-env = "utils.setup_env:main"
+validate-config = "utils.config:main"
+
+[project.urls]
+Homepage = "https://github.com/yourusername/SqlControlManager"
+Repository = "https://github.com/yourusername/SqlControlManager"
+Issues = "https://github.com/yourusername/SqlControlManager/issues"
+Documentation = "https://github.com/yourusername/SqlControlManager/tree/main/docs"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["*"]
+exclude = ["tests*", "docs*"]
+
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]
+python_files = ["test_*.py", "*_test.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = [
+    "-v",
+    "--tb=short",
+    "--strict-markers",
+    "--disable-warnings",
+]
+filterwarnings = [
+    "ignore::DeprecationWarning",
+    "ignore::UserWarning",
+    "ignore::PendingDeprecationWarning",
+]
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "integration: marks tests as integration tests",
+    "unit: marks tests as unit tests",
+]
+
+[tool.coverage.run]
+source = ["."]
+omit = [
+    "tests/*",
+    ".venv/*",
+    "venv/*",
+    "*/site-packages/*",
+    "setup.py",
+    "conftest.py",
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "if self.debug:",
+    "if settings.DEBUG",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if 0:",
+    "if __name__ == .__main__.:",
+    "class .*\\bProtocol\\):",
+    "@(abc\\.)?abstractmethod",
+]
+
+ignore_missing_imports = true
+
+[tool.flake8]
+max-line-length = 88
+extend-ignore = [
+    "E203",  # whitespace before ':'
+    "E501",  # line too long (handled by black)
+    "W503",  # line break before binary operator
+]
+exclude = [
+    ".git",
+    "__pycache__",
+    ".venv",
+    "venv",
+    "build",
+    "dist",
+]

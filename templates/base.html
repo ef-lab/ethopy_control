@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Control Table Monitor</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootswatch@5.3.3/dist/darkly/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.datatables.net/1.11.5/css/dataTables.bootstrap5.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-select@1.14.0-beta3/dist/css/bootstrap-select.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        /* Column visibility dropdown styling */
+        .column-visibility-container label {
+            margin-right: 10px;
+            font-weight: 500;
+        }
+        .bootstrap-select .dropdown-menu {
+            max-height: 60vh !important; /* 60% of viewport height */
+            overflow-y: auto !important;
+        }
+        .bootstrap-select .dropdown-toggle .filter-option {
+            display: inline-block;
+            overflow: hidden;
+            width: 100%;
+            text-overflow: ellipsis;
+        }
+        .dataTables_wrapper .row:first-child {
+            align-items: flex-end;
+        }
+        
+        /* Color-blind friendly palette classes */
+        .text-vermillion {
+            color: rgb(213, 94, 0) !important; /* Vermillion */
+        }
+        
+        .text-sky-blue {
+            color: rgb(86, 180, 233) !important; /* Sky blue */
+        }
+        
+        .text-bluish-green {
+            color: rgb(0, 158, 115) !important; /* Bluish green */
+        }
+        
+        .text-orange {
+            color: rgb(230, 159, 0) !important; /* Orange */
+        }
+        
+        .text-blue {
+            color: rgb(0, 114, 178) !important; /* Blue */
+        }
+        
+        .text-reddish-purple {
+            color: rgb(204, 121, 167) !important; /* Reddish purple */
+        }
+        
+        .text-yellow {
+            color: rgb(240, 228, 66) !important; /* Yellow */
+        }
+        
+        /* Background color classes */
+        .bg-vermillion {
+            background-color: rgb(213, 94, 0) !important; /* Vermillion */
+        }
+        
+        .bg-sky-blue {
+            background-color: rgb(86, 180, 233) !important; /* Sky blue */
+        }
+        
+        .bg-bluish-green {
+            background-color: rgb(0, 158, 115) !important; /* Bluish green */
+        }
+        
+        .bg-orange {
+            background-color: rgb(230, 159, 0) !important; /* Orange */
+        }
+        
+        .bg-blue {
+            background-color: rgb(0, 114, 178) !important; /* Blue */
+        }
+        
+        .bg-reddish-purple {
+            background-color: rgb(204, 121, 167) !important; /* Reddish purple */
+        }
+        
+        .bg-yellow {
+            background-color: rgb(240, 228, 66) !important; /* Yellow */
+        }
+        
+        /* Button color classes */
+        .btn-vermillion {
+            background-color: rgb(213, 94, 0);
+            border-color: rgb(213, 94, 0);
+            color: white;
+        }
+        
+        .btn-vermillion:hover, .btn-vermillion:focus, .btn-vermillion:active {
+            background-color: rgb(183, 74, 0);
+            border-color: rgb(183, 74, 0);
+            color: white;
+        }
+        
+        .btn-bluish-green {
+            background-color: rgb(0, 158, 115);
+            border-color: rgb(0, 158, 115);
+            color: white;
+        }
+        
+        .btn-bluish-green:hover, .btn-bluish-green:focus, .btn-bluish-green:active {
+            background-color: rgb(0, 138, 95);
+            border-color: rgb(0, 138, 95);
+            color: white;
+        }
+        
+        .btn-blue {
+            background-color: rgb(0, 114, 178);
+            border-color: rgb(0, 114, 178);
+            color: white;
+        }
+        
+        .btn-blue:hover, .btn-blue:focus, .btn-blue:active {
+            background-color: rgb(0, 94, 158);
+            border-color: rgb(0, 94, 158);
+            color: white;
+        }
+        
+        .btn-sky-blue {
+            background-color: rgb(86, 180, 233);
+            border-color: rgb(86, 180, 233);
+            color: white;
+        }
+        
+        .btn-sky-blue:hover, .btn-sky-blue:focus, .btn-sky-blue:active {
+            background-color: rgb(66, 160, 213);
+            border-color: rgb(66, 160, 213);
+            color: white;
+        }
+        
+        .btn-orange {
+            background-color: rgb(230, 159, 0);
+            border-color: rgb(230, 159, 0);
+            color: white;
+        }
+        
+        .btn-orange:hover, .btn-orange:focus, .btn-orange:active {
+            background-color: rgb(210, 139, 0);
+            border-color: rgb(210, 139, 0);
+            color: white;
+        }
+        
+        .btn-reddish-purple {
+            background-color: rgb(204, 121, 167);
+            border-color: rgb(204, 121, 167);
+            color: white;
+        }
+        
+        .btn-reddish-purple:hover, .btn-reddish-purple:focus, .btn-reddish-purple:active {
+            background-color: rgb(184, 101, 147);
+            border-color: rgb(184, 101, 147);
+            color: white;
+        }
+        
+        .btn-yellow {
+            background-color: rgb(240, 228, 66);
+            border-color: rgb(240, 228, 66);
+            color: black; /* Black text for better contrast */
+        }
+        
+        .btn-yellow:hover, .btn-yellow:focus, .btn-yellow:active {
+            background-color: rgb(220, 208, 46);
+            border-color: rgb(220, 208, 46);
+            color: black;
+        }
+        
+        /* Modern navbar styling */
+        .modern-navbar {
+            background: linear-gradient(90deg, #1a1a1a 0%, #2d2d2d 100%);
+            padding: 12px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+            margin-bottom: 2rem;
+        }
+        
+        .navbar-brand {
+            font-weight: 700;
+            font-size: 1.4rem;
+            color: white;
+            display: flex;
+            align-items: center;
+        }
+        
+        .navbar-brand i {
+            color: rgb(0, 114, 178);
+            margin-right: 8px;
+            font-size: 1.5rem;
+        }
+        
+        .modern-navbar .nav-item {
+            margin: 0 4px;
+        }
+        
+        .modern-navbar .nav-link {
+            font-weight: 500;
+            padding: 8px 16px;
+            border-radius: 6px;
+            transition: all 0.2s ease;
+            position: relative;
+            color: rgba(255, 255, 255, 0.8);
+        }
+        
+        .modern-navbar .nav-link:hover,
+        .modern-navbar .nav-link:focus {
+            color: white;
+            background-color: rgba(255, 255, 255, 0.05);
+        }
+        
+        .modern-navbar .nav-link.active {
+            color: white;
+            background-color: rgba(0, 114, 178, 0.15);
+        }
+        
+        .modern-navbar .nav-link.active::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 16px;
+            right: 16px;
+            height: 2px;
+            background-color: rgb(0, 114, 178);
+            border-radius: 2px;
+        }
+        
+        .user-profile {
+            display: flex;
+            align-items: center;
+            padding: 8px 16px;
+            background-color: rgba(255, 255, 255, 0.05);
+            border-radius: 6px;
+            margin-right: 10px;
+        }
+        
+        .user-avatar {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background-color: rgb(0, 114, 178);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 600;
+            margin-right: 8px;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+        }
+        
+        .user-name {
+            color: white;
+            font-weight: 500;
+        }
+        
+        .logout-btn {
+            padding: 8px 16px;
+            border-radius: 6px;
+            color: rgba(255, 255, 255, 0.8);
+            transition: all 0.2s ease;
+        }
+        
+        .logout-btn:hover {
+            background-color: rgba(213, 94, 0, 0.15);
+            color: white;
+        }
+        
+        .logout-btn i {
+            margin-right: 6px;
+        }
+        
+        /* Dropdown styling */
+        .modern-navbar .dropdown-menu {
+            background-color: #2d2d2d;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            padding: 8px;
+            border-radius: 8px;
+            margin-top: 10px;
+        }
+        
+        .modern-navbar .dropdown-item {
+            color: rgba(255, 255, 255, 0.8);
+            border-radius: 4px;
+            padding: 8px 12px;
+        }
+        
+        .modern-navbar .dropdown-item:hover,
+        .modern-navbar .dropdown-item:focus {
+            background-color: rgba(0, 114, 178, 0.15);
+            color: white;
+        }
+        
+        .alert-vermillion {
+            background-color: rgb(213, 94, 0) !important;
+            color: white !important;
+            border: none;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg modern-navbar">
+        <div class="container">
+            <a class="navbar-brand" href="{{ url_for('index') }}">
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav">
+                    {% if username %}
+                    <li class="nav-item">
+                        <a class="nav-link {{ 'active' if request.endpoint == 'index' }}" href="{{ url_for('index') }}">
+                            <i class="fas fa-database me-1"></i> Control
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {{ 'active' if request.endpoint == 'task_list' }}" href="{{ url_for('task_list') }}">
+                            <i class="fas fa-tasks me-1"></i> Tasks
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {{ 'active' if request.endpoint == 'activity_monitor' }}" href="{{ url_for('activity_monitor') }}">
+                            <i class="fas fa-chart-line me-1"></i> Activity Monitor
+                        </a>
+                    </li>
+                    {% if session.get('is_admin') %}
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle {{ 'active' if request.endpoint in ['list_users', 'add_user', 'edit_user'] }}" href="#" id="adminDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="fas fa-shield-alt me-1"></i> Admin
+                        </a>
+                        <ul class="dropdown-menu" aria-labelledby="adminDropdown">
+                            <li><a class="dropdown-item" href="{{ url_for('list_users') }}">
+                                <i class="fas fa-users me-2"></i> User Management
+                            </a></li>
+                        </ul>
+                    </li>
+                    {% endif %}
+                    {% endif %}
+                </ul>
+                <ul class="navbar-nav ms-auto">
+                    {% if username %}
+                    <li class="nav-item">
+                        <div class="user-profile">
+                            <div class="user-avatar">{{ username[0] }}</div>
+                            <span class="user-name">{{ username }}</span>
+                        </div>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link logout-btn" href="{{ url_for('logout') }}">
+                            <i class="fas fa-sign-out-alt"></i> Logout
+                        </a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        {% block content %}{% endblock %}
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/1.11.5/js/dataTables.bootstrap5.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/toastify-js"></script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>

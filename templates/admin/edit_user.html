@@ -1,0 +1,35 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row mb-3">
+        <div class="col">
+            <h2>Edit User: {{ user.username }}</h2>
+        </div>
+        <div class="col-auto">
+            <a href="{{ url_for('list_users') }}" class="btn btn-secondary">Back to Users</a>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-body">
+            <form method="post">
+                <div class="mb-3">
+                    <label for="username" class="form-label">Username</label>
+                    <input type="text" class="form-control" id="username" name="username" value="{{ user.username }}" required>
+                </div>
+                <div class="mb-3">
+                    <label for="password" class="form-label">Password</label>
+                    <input type="password" class="form-control" id="password" name="password" placeholder="Leave blank to keep current password">
+                    <div class="form-text">Leave blank to keep the current password.</div>
+                </div>
+                <div class="mb-3 form-check">
+                    <input type="checkbox" class="form-check-input" id="is_admin" name="is_admin" {% if user.is_admin %}checked{% endif %}>
+                    <label class="form-check-label" for="is_admin">Administrator</label>
+                </div>
+                <button type="submit" class="btn btn-primary">Update User</button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

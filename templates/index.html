@@ -1,0 +1,707 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <h2>Control Table Monitor</h2>
+    </div>
+    <div class="col-auto">
+        <div class="refresh-control">
+            <div class="input-group">
+                <select id="refreshInterval" class="form-select">
+                    <option value="0">Manual refresh</option>
+                    <option value="5000">5 seconds</option>
+                    <option value="10000">10 seconds</option>
+                    <option value="30000">30 seconds</option>
+                    <option value="60000" selected>1 minute</option>
+                    <option value="300000">5 minutes</option>
+                </select>
+                <button id="refreshButton" class="btn btn-blue">
+                    <i class="fas fa-sync-alt"></i> 
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .column-visibility-container {
+        display: inline-block;
+        margin-right: 20px;
+    }
+    .dataTables_wrapper .dataTables_filter {
+        display: inline-block;
+        float: right;
+    }
+    .dataTables_wrapper .dataTables_length {
+        margin-bottom: 15px;
+    }
+    /* Style the native DataTables length control */
+    .dataTables_length {
+        margin-bottom: 1rem;
+    }
+    .dataTables_length label {
+        display: flex;
+        align-items: center;
+    }
+    .dataTables_length select {
+        margin: 0 0.5rem;
+    }
+    /* Style the search box */
+    .dataTables_filter input {
+        margin-left: 0.5rem;
+        background-color: #2a303c;
+        border: 1px solid #4b5563;
+        color: #fff;
+        border-radius: 0.25rem;
+        padding: 0.25rem 0.5rem;
+    }
+    /* Fix positioning of elements */
+    .dataTables_wrapper .row:first-child {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 1rem;
+    }
+    /* Column visibility dropdown styling */
+    #columnVisibilityDropdown {
+        background-color: #1e2631;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+        padding: 12px;
+    }
+    #columnVisibilityDropdown .mb-2 {
+        font-size: 1.1rem;
+        border-bottom: 1px solid #374151;
+        padding-bottom: 8px;
+        margin-bottom: 12px;
+    }
+    #columnVisibilityDropdown .form-check {
+        padding: 4px 0;
+    }
+    #columnVisibilityDropdown .form-check-input:checked {
+        background-color: rgb(0, 114, 178); /* Blue from color-blind palette */
+        border-color: rgb(0, 114, 178);
+    }
+    
+    /* Color-blind friendly palette classes */
+    .text-vermillion {
+        color: rgb(213, 94, 0) !important; /* Vermillion */
+    }
+    
+    .text-sky-blue {
+        color: rgb(86, 180, 233) !important; /* Sky blue */
+    }
+    
+    .text-bluish-green {
+        color: rgb(0, 158, 115) !important; /* Bluish green */
+    }
+    
+    .text-orange {
+        color: rgb(230, 159, 0) !important; /* Orange */
+    }
+    
+    .text-blue {
+        color: rgb(0, 114, 178) !important; /* Blue */
+    }
+    
+    .text-reddish-purple {
+        color: rgb(204, 121, 167) !important; /* Reddish purple */
+    }
+    
+    .text-yellow {
+        color: rgb(240, 228, 66) !important; /* Yellow */
+    }
+    
+    /* Background color classes */
+    .bg-vermillion {
+        background-color: rgb(213, 94, 0) !important; /* Vermillion */
+    }
+    
+    .bg-sky-blue {
+        background-color: rgb(86, 180, 233) !important; /* Sky blue */
+    }
+    
+    .bg-bluish-green {
+        background-color: rgb(0, 158, 115) !important; /* Bluish green */
+    }
+    
+    .bg-orange {
+        background-color: rgb(230, 159, 0) !important; /* Orange */
+    }
+    
+    .bg-blue {
+        background-color: rgb(0, 114, 178) !important; /* Blue */
+    }
+    
+    .bg-reddish-purple {
+        background-color: rgb(204, 121, 167) !important; /* Reddish purple */
+    }
+    
+    .bg-yellow {
+        background-color: rgb(240, 228, 66) !important; /* Yellow */
+    }
+    
+    /* Button color classes */
+    .btn-vermillion {
+        background-color: rgb(213, 94, 0);
+        border-color: rgb(213, 94, 0);
+        color: white;
+    }
+    
+    .btn-vermillion:hover, .btn-vermillion:focus, .btn-vermillion:active {
+        background-color: rgb(183, 74, 0);
+        border-color: rgb(183, 74, 0);
+        color: white;
+    }
+    
+    .btn-bluish-green {
+        background-color: rgb(0, 158, 115);
+        border-color: rgb(0, 158, 115);
+        color: white;
+    }
+    
+    .btn-bluish-green:hover, .btn-bluish-green:focus, .btn-bluish-green:active {
+        background-color: rgb(0, 138, 95);
+        border-color: rgb(0, 138, 95);
+        color: white;
+    }
+    
+    .btn-blue {
+        background-color: rgb(0, 114, 178);
+        border-color: rgb(0, 114, 178);
+        color: white;
+    }
+    
+    .btn-blue:hover, .btn-blue:focus, .btn-blue:active {
+        background-color: rgb(0, 94, 158);
+        border-color: rgb(0, 94, 158);
+        color: white;
+    }
+    
+    .btn-sky-blue {
+        background-color: rgb(86, 180, 233);
+        border-color: rgb(86, 180, 233);
+        color: white;
+    }
+    
+    .btn-sky-blue:hover, .btn-sky-blue:focus, .btn-sky-blue:active {
+        background-color: rgb(66, 160, 213);
+        border-color: rgb(66, 160, 213);
+        color: white;
+    }
+    
+    .btn-orange {
+        background-color: rgb(230, 159, 0);
+        border-color: rgb(230, 159, 0);
+        color: white;
+    }
+    
+    .btn-orange:hover, .btn-orange:focus, .btn-orange:active {
+        background-color: rgb(210, 139, 0);
+        border-color: rgb(210, 139, 0);
+        color: white;
+    }
+    
+    .btn-reddish-purple {
+        background-color: rgb(204, 121, 167);
+        border-color: rgb(204, 121, 167);
+        color: white;
+    }
+    
+    .btn-reddish-purple:hover, .btn-reddish-purple:focus, .btn-reddish-purple:active {
+        background-color: rgb(184, 101, 147);
+        border-color: rgb(184, 101, 147);
+        color: white;
+    }
+    
+    .btn-yellow {
+        background-color: rgb(240, 228, 66);
+        border-color: rgb(240, 228, 66);
+        color: black; /* Black text for better contrast */
+    }
+    
+    .btn-yellow:hover, .btn-yellow:focus, .btn-yellow:active {
+        background-color: rgb(220, 208, 46);
+        border-color: rgb(220, 208, 46);
+        color: black;
+    }
+    
+    /* Custom class for inactive setups with Vermillion background */
+    .table-inactive,
+    table.dataTable tbody tr.table-inactive,
+    #controlTable tbody tr.table-inactive,
+    .table-striped tbody tr.table-inactive {
+        background-color: rgba(213, 94, 0, 0.2) !important; /* Light Vermillion with transparency */
+    }
+    
+    /* Mobile responsive styles */
+    @media (max-width: 767px) {
+        /* Hide default DataTables elements that might be overlapping */
+        .dataTables_wrapper .dataTables_length, 
+        .dataTables_wrapper .dataTables_filter,
+        .dataTables_wrapper .dataTables_info, 
+        .dataTables_wrapper .dataTables_paginate {
+            text-align: center;
+            float: none;
+            display: block;
+            margin-bottom: 0.5rem;
+            clear: both;
+        }
+        
+        /* Fix search box position */
+        .dataTables_filter {
+            position: relative;
+            margin-top: 0.5rem;
+            margin-bottom: 1rem;
+            width: 100%;
+            z-index: 1;
+        }
+        
+        /* Control bootstrap-select width */
+        .bootstrap-select {
+            width: 100% !important;
+        }
+        
+        /* Make action buttons stack on mobile */
+        .edit-btn, .reboot-btn {
+            margin-bottom: 0.25rem;
+            display: block;
+            width: 100%;
+        }
+        
+        /* Reduce padding in tables */
+        .table td, .table th {
+            padding: 0.25rem !important;
+            font-size: 0.85rem;
+        }
+        
+        /* Ensure clean layout of table */
+        .table-responsive {
+            clear: both;
+            position: relative;
+            z-index: 5;
+            margin-top: 1rem;
+            border: none;
+            overflow-x: auto !important;
+            -webkit-overflow-scrolling: touch;
+            width: 100%;
+            display: block;
+        }
+        
+        /* Force table to be narrower */
+        #controlTable {
+            width: 100% !important;
+            min-width: 300px !important;
+        }
+        
+        /* Fix filter form spacing */
+        #filterForm .col-md-6 {
+            margin-bottom: 1rem;
+        }
+        
+        /* Make bulk actions more usable on mobile */
+        #bulkStatus {
+            margin-bottom: 0.5rem;
+        }
+        
+        .d-flex.gap-2 {
+            flex-direction: column;
+        }
+        
+        /* Styling for mobile search box */
+        #mobileSearchBox {
+            background-color: #2a303c;
+            border: 1px solid #4b5563;
+            color: #fff;
+        }
+    }
+    
+    /* Specific styles for very small screens in portrait mode */
+    @media (max-width: 480px) {
+        .table td, .table th {
+            padding: 0.15rem !important;
+            font-size: 0.75rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 100px; /* Limit cell width */
+        }
+        
+        /* Force horizontal scrolling for table on portrait mode */
+        .table-responsive {
+            margin-left: -0.5rem;
+            margin-right: -0.5rem;
+            width: calc(100% + 1rem);
+            overflow-x: auto !important;
+            -webkit-overflow-scrolling: touch;
+        }
+        
+        /* Fix pagination on small screens */
+        .dataTables_paginate {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        
+        /* Ensure table doesn't break layout */
+        #controlTable {
+            table-layout: fixed;
+            min-width: 300px !important;
+        }
+        
+        /* Set minimum widths for essential columns */
+        #controlTable th:nth-child(2), /* Setup column */
+        #controlTable td:nth-child(2) {
+            min-width: 80px;
+            max-width: 120px;
+        }
+        
+        #controlTable th:nth-child(3), /* Status column */
+        #controlTable td:nth-child(3) {
+            min-width: 70px;
+            max-width: 90px;
+        }
+    }
+    
+    /* Refresh control styling */
+    .refresh-control {
+        display: flex;
+        align-items: center;
+    }
+    
+    .refresh-control .input-group {
+        width: auto;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+        border-radius: 6px;
+        overflow: hidden;
+    }
+    
+    .refresh-control select {
+        border-radius: 6px 0 0 6px;
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        background-color: #2a303c;
+        color: #fff;
+        font-weight: 500;
+        height: 42px;
+        min-width: 140px;
+        padding: 0 15px;
+    }
+    
+    .refresh-control .btn {
+        border-radius: 0 6px 6px 0;
+        padding: 0.5rem 1rem;
+        height: 42px;
+        width: 50px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    .refresh-control .btn i {
+        font-size: 1.2rem;
+    }
+    
+    /* Modern filter and bulk actions styling */
+    .controls-container {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 24px;
+        margin-bottom: 24px;
+        padding: 0;
+        background: transparent;
+        border: none;
+        justify-content: space-between;
+    }
+    
+    .filter-section {
+        flex: 1;
+        min-width: 280px;
+        max-width: 60%;
+    }
+    
+    .actions-section {
+        flex: 0 0 auto;
+        min-width: 280px;
+        margin-left: auto;
+    }
+    
+    .section-title {
+        font-size: 15px;
+        font-weight: 500;
+        color: rgba(255, 255, 255, 0.7);
+        margin-bottom: 10px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    
+    .filter-dropdown .bootstrap-select,
+    .action-dropdown .form-select {
+        border-radius: 6px;
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        box-shadow: none;
+    }
+    
+    .filter-dropdown .bootstrap-select .dropdown-toggle {
+        background: transparent;
+        border: none;
+        height: 46px;
+        font-weight: normal;
+        padding: 10px 16px;
+    }
+    
+    .action-controls {
+        display: flex;
+        gap: 10px;
+    }
+    
+    .action-dropdown {
+        flex: 1;
+        max-width: 240px;
+    }
+    
+    .action-dropdown .form-select {
+        height: 46px;
+        padding: 10px 16px;
+        font-weight: normal;
+        color: white;
+        background-color: rgba(42, 48, 60, 0.8);
+    }
+    
+    .action-button .btn {
+        height: 46px;
+        padding: 8px 20px;
+        font-weight: 500;
+        border-radius: 6px;
+        font-size: 14px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+    }
+</style>
+
+<div class="controls-container">
+    <div class="filter-section">
+        <h6 class="section-title">Filter Setups</h6>
+        <div class="filter-dropdown">
+            <select id="setupFilter" class="selectpicker" multiple data-live-search="true" data-actions-box="true" title="Select setups to display">
+                {% for setup in setups %}
+                <option value="{{ setup.name }}">{{ setup.name }} ({{ setup.status }})</option>
+                {% endfor %}
+            </select>
+        </div>
+    </div>
+    <div class="actions-section">
+        <h6 class="section-title">Bulk Actions</h6>
+        <div class="action-controls">
+            <div class="action-dropdown">
+                <select id="bulkStatus" class="form-select">
+                    <option value="">Change Status...</option>
+                    <option value="running">Running</option>
+                    <option value="stop">Stop</option>
+                </select>
+            </div>
+            <div class="action-button">
+                <button type="button" id="applyBulkAction" class="btn btn-bluish-green" disabled>
+                    Apply
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Mobile-specific DataTable controls -->
+<div class="d-block d-md-none mt-3 mb-2 px-2">
+    <div class="card bg-dark">
+        <div class="card-body p-2">
+            <div class="mb-2 fw-bold">Table Controls</div>
+            <div class="d-flex gap-2 flex-wrap">
+                <button id="mobileRefreshBtn" class="btn btn-sm btn-blue">
+                    <i class="fas fa-sync-alt"></i> Refresh
+                </button>
+                <button id="mobileColumnsBtn" class="btn btn-sm btn-sky-blue" data-bs-toggle="modal" data-bs-target="#columnModal">
+                    <i class="fas fa-columns"></i> Columns
+                </button>
+            </div>
+            <div class="mt-2">
+                <input type="text" id="mobileSearchBox" class="form-control form-control-sm" placeholder="Search setups...">
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <!-- Hide standard controls on mobile -->
+        <div class="d-none d-md-flex justify-content-end align-items-center mb-3">
+            <button id="columnVisibilityBtn" class="btn btn-blue btn-sm" data-bs-toggle="modal" data-bs-target="#columnModal">
+                <i class="fas fa-columns"></i> Columns
+            </button>
+        </div>
+        <div class="d-block d-md-none small text-muted mb-2">
+            <i class="fas fa-info-circle"></i> Swipe left/right to see more columns
+        </div>
+        <div class="table-responsive">
+            <table id="controlTable" class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>
+                            <input type="checkbox" id="selectAll" class="form-check-input">
+                        </th>
+                        <th>Setup</th>
+                        <th>Status</th>
+                        <th>Animal ID</th>
+                        <th>Task Index</th>
+                        <th>Session</th>
+                        <th>Trials</th>
+                        <th>Total Liquid</th>
+                        <th>State</th>
+                        <th>Difficulty</th>
+                        <th>Start Time</th>
+                        <th>Stop Time</th>
+                        <th>Last Ping</th>
+                        <th>Notes</th>
+                        <th>User</th>
+                        <th>Queue Size</th>
+                        <th>IP Address</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Column Visibility Modal -->
+<div class="modal fade" id="columnModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content bg-dark">
+            <div class="modal-header border-bottom border-secondary">
+                <h5 class="modal-title">Select Columns</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="d-block d-sm-none alert alert-warning mb-3">
+                    <small><i class="fas fa-exclamation-triangle"></i> On small screens, limit to 5 columns for best experience</small>
+                </div>
+                <div class="row">
+                    <div class="col-6">
+                        <div class="form-check mb-2">
+                            <input class="form-check-input column-toggle" type="checkbox" value="5" id="col-session" checked>
+                            <label class="form-check-label" for="col-session">Session</label>
+                        </div>
+                        <div class="form-check mb-2">
+                            <input class="form-check-input column-toggle" type="checkbox" value="6" id="col-trials">
+                            <label class="form-check-label" for="col-trials">Trials</label>
+                        </div>
+                        <div class="form-check mb-2">
+                            <input class="form-check-input column-toggle" type="checkbox" value="7" id="col-liquid">
+                            <label class="form-check-label" for="col-liquid">Total Liquid</label>
+                        </div>
+                        <div class="form-check mb-2">
+                            <input class="form-check-input column-toggle" type="checkbox" value="8" id="col-state">
+                            <label class="form-check-label" for="col-state">State</label>
+                        </div>
+                        <div class="form-check mb-2">
+                            <input class="form-check-input column-toggle" type="checkbox" value="9" id="col-difficulty" checked>
+                            <label class="form-check-label" for="col-difficulty">Difficulty</label>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="form-check mb-2">
+                            <input class="form-check-input column-toggle" type="checkbox" value="10" id="col-start" checked>
+                            <label class="form-check-label" for="col-start">Start Time</label>
+                        </div>
+                        <div class="form-check mb-2">
+                            <input class="form-check-input column-toggle" type="checkbox" value="11" id="col-stop" checked>
+                            <label class="form-check-label" for="col-stop">Stop Time</label>
+                        </div>
+                        <div class="form-check mb-2">
+                            <input class="form-check-input column-toggle" type="checkbox" value="13" id="col-notes">
+                            <label class="form-check-label" for="col-notes">Notes</label>
+                        </div>
+                        <div class="form-check mb-2">
+                            <input class="form-check-input column-toggle" type="checkbox" value="14" id="col-user" checked>
+                            <label class="form-check-label" for="col-user">User</label>
+                        </div>
+                        <div class="form-check mb-2">
+                            <input class="form-check-input column-toggle" type="checkbox" value="15" id="col-queue">
+                            <label class="form-check-label" for="col-queue">Queue Size</label>
+                        </div>
+                        <div class="form-check mb-2">
+                            <input class="form-check-input column-toggle" type="checkbox" value="16" id="col-ip" checked>
+                            <label class="form-check-label" for="col-ip">IP Address</label>
+                        </div>
+                        <div class="form-check mb-2">
+                            <input class="form-check-input column-toggle" type="checkbox" value="17" id="col-actions" checked>
+                            <label class="form-check-label" for="col-actions">Actions</label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer border-top border-secondary">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Modal -->
+<div class="modal fade" id="editModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Edit Control Setup</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="editForm">
+                    <input type="hidden" id="editSetup">
+                    <div class="mb-3">
+                        <label for="editStatus" class="form-label">Status</label>
+                        <select class="form-select" id="editStatus">
+                            <option value="">Keep Current Status</option>
+                            <option value="running">Running</option>
+                            <option value="stop">Stop</option>
+                        </select>
+                        <div class="form-text">Leave as "Keep Current Status" to only update other fields.</div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="editAnimalId" class="form-label">Animal ID</label>
+                        <input type="text" class="form-control" id="editAnimalId">
+                    </div>
+                    <div class="mb-3">
+                        <label for="editTaskIdx" class="form-label">Task Index</label>
+                        <input type="number" class="form-control" id="editTaskIdx">
+                    </div>
+                    <div class="mb-3">
+                        <label for="editStartTime" class="form-label">Start Time (HH:MM)</label>
+                        <input type="time" class="form-control" id="editStartTime">
+                    </div>
+                    <div class="mb-3">
+                        <label for="editStopTime" class="form-label">Stop Time (HH:MM)</label>
+                        <input type="time" class="form-control" id="editStopTime">
+                    </div>
+                    <div class="mb-3">
+                        <label for="editUserName" class="form-label">User Name</label>
+                        <input type="text" class="form-control" id="editUserName" placeholder="Enter username to assign setup">
+                        <div class="form-text">Assign this setup to a specific user.</div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-bluish-green" id="saveChanges">Save changes</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/bootstrap-select@1.14.0-beta3/dist/js/bootstrap-select.min.js"></script>
+<script src="{{ url_for('static', filename='js/table.js') }}"></script>
+{% endblock %}
