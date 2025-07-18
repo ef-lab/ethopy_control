@@ -1,150 +1,125 @@
-# SQL Control Manager
+# Ethopy Control
 
 A Flask-based application for managing laboratory experiments and device control.
 
 ## Quick Start
 
-### 1. Generate Environment Configuration
-
+1. **Clone the repository:**
 ```bash
-# Generate secure environment variables
-python3 setup_env.py
+git clone github.com/ef-lab/ethopy_control
+cd ethopy_control
 ```
 
-### 2. Set Up Environment Variables
-
-Create a `.env` file with the generated template and your actual credentials:
-
+2. **Create and activate virtual environment:**
 ```bash
-# REQUIRED: Use generated SECRET_KEY (secure & random)
-SECRET_KEY=generated_key_from_script
-
-# REQUIRED: Your existing database credentials
-DB_USER=your_actual_db_username  
-DB_PASSWORD=your_actual_db_password
-
-# REQUIRED: Your existing SSH credentials
-SSH_USERNAME=your_actual_ssh_username
-SSH_PASSWORD=your_actual_ssh_password
-
-# REQUIRED: Admin user credentials
-ADMIN_USERNAME=admin
-ADMIN_PASSWORD=your_secure_admin_password
+python3 -m venv .venv
+source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 ```
 
-### 3. Install and Run
-
-Choose one of the following installation methods:
-
-#### Option A: Standard Installation
+3. **Install dependencies:**
 ```bash
-# Install the application
+# Using pip (standard installation)
 pip install .
-
-# Validate configuration
-python3 config.py
-
-# Initialize database (if needed)
-python3 setup.py
-
-# Start the application
-python3 main.py
 ```
 
-#### Option B: Development Installation (Recommended for developers)
+4. **Complete setup and database initialization:**
 ```bash
-# Install in development mode with all development tools
-pip install -e .[dev]
-
-# Validate configuration
-validate-config
-
-# Initialize database (if needed)
-python3 setup.py
-
-# Start the application
-python3 main.py
+# Single command setup - handles environment and database setup
+python3 app_setup.py
 ```
 
-## 📋 Configuration
+This interactive script will:
+- **Create .env file** if it doesn't exist (prompts for database, SSH, and admin credentials)
+- **Generate secure SECRET_KEY** automatically
+- **Validate your configuration** and test database connectivity
+- **Inspect your existing database structure**
+- **Create the Users table** if it doesn't exist
+- **Verify that required tables** (#control, #task) exist
+- **Create an admin user** if no users exist
+- **Provide detailed diagnostics** if any issues occur
 
-**Environment Variables**: See **[Environment Variables Documentation](docs/environment-variables.md)** for complete details.
+**What you'll be prompted for:**
+- Database credentials (host, username, password)
+- SSH configuration (optional, for remote reboot functionality)
+- Authentication preferences (local vs LDAP)
+- Admin user configuration
 
-**Required variables:**
-- `SECRET_KEY` - Flask session encryption (generate new)
-- `DB_USER`, `DB_PASSWORD` - Your existing database credentials  
-- `SSH_USERNAME`, `SSH_PASSWORD` - Your existing SSH credentials
+**⚠️ Security Notes:**
+- Never commit .env files to version control
+- Store credentials securely (password manager recommended)
 
-**Optional variables:**
-- `FLASK_CONFIG` - Environment (development/production/testing)
-- `USE_LOCAL_AUTH`, `USE_LDAP_AUTH` - Authentication methods
-- `DB_HOST`, `DB_PORT`, `DB_NAME` - Database connection settings
-
-## Production Deployment
-
-**Important:** Never use `.env` files in production. Set environment variables directly:
-
+5. **Run the development server:**
 ```bash
-export SECRET_KEY="your-production-secret"
-export DB_PASSWORD="your-production-password"
-export FLASK_CONFIG="production"
 python3 main.py
 ```
 
-## Features
+The application will be available at `http://localhost:5000`.
 
-- **Control table monitoring** with real-time status updates
-- **Bulk status updates** for multiple setups
+## Project Structure
+```
+ethopy_control/
+├── main.py                   # Primary application entry point
+├── app.py                    # Flask application definition and routes
+├── app_setup.py             # Interactive setup with validation
+├── models.py                # Database models (User, ControlTable, Task)
+├── pyproject.toml          # Python project configuration and dependencies
+│
+├── utils/                   # Utility modules
+│   ├── __init__.py         # Package initialization
+│   ├── init_db.py          # Centralized database initialization
+│   ├── config.py           # Configuration management and validation
+│   └── setup_env.py        # Environment variable template generation
+│
+├── templates/              # Jinja2 HTML templates
+│   ├── base.html          # Base template with navigation
+│   ├── index.html         # Main control table interface
+│   ├── login.html         # Authentication page
+│   ├── tasks.html         # Task management interface
+│   └── activity_monitor.html # Activity monitoring dashboard
+│
+├── static/                # Static web assets
+│   ├── css/              # Stylesheets
+│   ├── js/               # JavaScript files
+│   │   └── table.js      # DataTables implementation
+│   └── favicon.ico       # Site favicon
+│
+├── real_time_plot/        # Real-time data visualization
+│   ├── get_activity.py    # Database activity queries
+│   └── real_time_events.py # Dash-based real-time plotting
+│
+├── tests/                 # Test suite
+│   ├── conftest.py       # pytest configuration
+│   ├── test_api.py       # API endpoint tests
+│   └── test_models.py    # Database model tests
+│
+└── docs/                 # Documentation
+    ├── setup.md          # This setup guide
+    └── mkdocs.yml        # Documentation configuration
+```
+
+## Core Features
+
+### 1. Control Table Management
+- **Real-time status monitoring** of lab setups
+- **Bulk operations** for updating multiple setups
+- **User assignment** and access control
 - **Remote reboot capability** via SSH
-- **Dual authentication** (Local database + LDAP)
-- **Role-based access control** (Admin/User permissions)
-- **Real-time data visualization** with Dash/Plotly
-- **Task management** and assignment system
 
-## Development
+### 2. Task Management
+- **CRUD operations** for experimental tasks
+- **Task assignment** to specific setups
+- **Task history** and tracking
 
-### Prerequisites
+### 3. Real-time Data Visualization
+- **Live event plotting** using Dash and Plotly
+- **Lick port and proximity sensor** data visualization
+- **Configurable time windows** (30s, 60s, 5min, all)
+- **Multi-setup monitoring**
 
-- **Python 3.11+** (required)
-- **MySQL/MariaDB** database
-- **Git** for version control
-
-### Development Setup
-
-1. **Clone and set up virtual environment:**
-   ```bash
-   git clone <repository-url>
-   cd ethopy_control
-   python3 -m venv .venv
-   source .venv/bin/activate  # On Windows: .venv\Scripts\activate
-   ```
-
-2. **Install in development mode:**
-   ```bash
-   # Install with all development dependencies
-   pip install -e .[dev]
-   
-   # Or install minimal dependencies
-   pip install -e .
-   ```
-
-3. **Generate development configuration:**
-   ```bash
-   python3 setup_env.py
-   # Edit .env with your actual database credentials
-   ```
-
-4. **Initialize database:**
-   ```bash
-   python3 setup.py  # Interactive setup with validation
-   # Or standalone initialization
-   python3 init_db.py
-   ```
-
-5. **Run development server:**
-   ```bash
-   python3 main.py
-   ```
+### 4. User Management & Authentication
+- **Local authentication**: Database-stored user accounts
+- **Role-based access**: Admin and regular users
+- **Session management** with Flask sessions
 
 #### Documentation
 ```bash
