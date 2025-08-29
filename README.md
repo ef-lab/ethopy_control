@@ -4,7 +4,7 @@
 
 A Flask-based application for managing laboratory experiments and device control.
 
-👉 [Documentation](https://ef-lab.github.io/ethopy_package/)
+👉 [Documentation](https://ef-lab.github.io/ethopy_control/)
 
 ## Quick Start
 
