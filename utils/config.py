@@ -59,26 +59,38 @@ class Config:
         LDAP_BASE_DN = os.environ.get("LDAP_BASE_DN")
         if not LDAP_BASE_DN:
             raise ValueError("LDAP_BASE_DN is required when USE_LDAP_AUTH=true")
-        LDAP_BIND_USER_DN = os.environ.get("LDAP_BIND_USER_DN")
-        if not LDAP_BIND_USER_DN:
-            raise ValueError("LDAP_BIND_USER_DN is required when USE_LDAP_AUTH=true")
-        LDAP_BIND_USER_PASSWORD = os.environ.get("LDAP_BIND_USER_PASSWORD")
-        if not LDAP_BIND_USER_PASSWORD:
-            raise ValueError(
-                "LDAP_BIND_USER_PASSWORD is required when USE_LDAP_AUTH=true"
-            )
     else:
         LDAP_HOST = os.environ.get("LDAP_HOST", "ldap.example.org")
         LDAP_BASE_DN = os.environ.get("LDAP_BASE_DN", "dc=example,dc=org")
-        LDAP_BIND_USER_DN = os.environ.get("LDAP_BIND_USER_DN", "")
-        LDAP_BIND_USER_PASSWORD = os.environ.get("LDAP_BIND_USER_PASSWORD", "")
 
+    # LDAP connection settings - with environment variable support
+    LDAP_PORT = int(os.environ.get("LDAP_PORT", "389"))
+    LDAP_USE_SSL = os.environ.get("LDAP_USE_SSL", "false").lower() == "true"
+
+    # LDAP bind credentials - optional for anonymous binding
+    LDAP_BIND_USER_DN = os.environ.get("LDAP_BIND_USER_DN", "").strip()
+    LDAP_BIND_USER_PASSWORD = os.environ.get("LDAP_BIND_USER_PASSWORD", "").strip()
+
+    # Convert "None" strings to empty strings (common mistake in .env files)
+    if LDAP_BIND_USER_DN.lower() == "none":
+        LDAP_BIND_USER_DN = ""
+    if LDAP_BIND_USER_PASSWORD.lower() == "none":
+        LDAP_BIND_USER_PASSWORD = ""
+
+    # Directory structure settings
     LDAP_USER_DN = os.environ.get("LDAP_USER_DN", "ou=users")
     LDAP_GROUP_DN = os.environ.get("LDAP_GROUP_DN", "ou=groups")
-    LDAP_USER_RDN_ATTR = "uid"
-    LDAP_USER_LOGIN_ATTR = "uid"
-    LDAP_USE_SSL = True
-    LDAP_PORT = 636
+    LDAP_USER_RDN_ATTR = os.environ.get("LDAP_USER_RDN_ATTR", "uid")
+    LDAP_USER_LOGIN_ATTR = os.environ.get("LDAP_USER_LOGIN_ATTR", "uid")
+
+    # Flask-LDAP3-Login specific settings
+    LDAP_SEARCH_FOR_GROUPS = os.environ.get("LDAP_SEARCH_FOR_GROUPS", "false").lower() == "true"
+    LDAP_GROUP_SEARCH_SCOPE = "SUBTREE"
+    LDAP_USER_SEARCH_SCOPE = "SUBTREE"
+
+    # Additional Flask-LDAP3-Login settings to handle Synology DS properly
+    LDAP_GROUP_OBJECT_FILTER = "(&(objectclass=posixGroup)(memberUid=%s))"
+    LDAP_USER_OBJECT_FILTER = "(&(objectclass=person)(uid=%s))"
 
 
 class DevelopmentConfig(Config):
