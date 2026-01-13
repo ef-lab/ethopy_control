@@ -57,7 +57,14 @@ This interactive script will:
 python3 main.py
 ```
 
-The application will be available at `http://localhost:5000`.
+The application will be available at `http://localhost:8000` (default port).
+
+**⚠️ Port Configuration Note:**
+- **Default port is 8000**
+- **Customize the port** by setting the `PORT` environment variable in your `.env` file:
+  ```
+  PORT=8080
+  ```
 
 ## Project Structure
 ```

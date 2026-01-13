@@ -8,6 +8,7 @@ import logging
 import os
 from app import app
 from utils.init_db import validate_database_connection
+from utils.config import get_config
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -25,10 +26,14 @@ def main():
         logger.error("Run 'python init_db.py' to initialize the database if needed.")
         return False
 
+    # Get port from configuration
+    config = get_config()
+    port = config.PORT
+
     # Start the Flask application
-    logger.info("Starting web server...")
+    logger.info(f"Starting web server on port {port}...")
     debug_mode = os.environ.get("FLASK_CONFIG", "development") == "development"
-    app.run(host="0.0.0.0", port=5000, debug=debug_mode)
+    app.run(host="0.0.0.0", port=port, debug=debug_mode)
 
     return True
 
