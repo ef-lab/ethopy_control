@@ -709,10 +709,8 @@ def get_activity_data():
     """API endpoint to fetch activity data for plotting."""
     try:
         from real_time_plot.get_activity import (
-            get_recent_lick_events,
-            get_recent_proximity_events,
-            get_port_config_types,
             get_control_entry_details,
+            get_events_auto,
             get_recent_trial_states,
         )
 
@@ -731,70 +729,47 @@ def get_activity_data():
         if animal_id is None or session is None:
             return jsonify({"error": "Missing animal_id or session"}), 404
 
-        # Get port configurations
-        port_configs = get_port_config_types(animal_id, session)
-        lick_ports = [
-            port for config_type, port in port_configs if config_type.lower() == "lick"
-        ]
-        proximity_ports = [
-            port
-            for config_type, port in port_configs
-            if config_type.lower() == "proximity"
-        ]
-
-        # Get events
-        lick_events = get_recent_lick_events(
-            animal_id, session, time_window, lick_ports
-        )
-        proximity_events = get_recent_proximity_events(
-            animal_id, session, time_window, proximity_ports
-        )
-
+        # Auto-discover all event types for this session
+        all_events = get_events_auto(animal_id, session, time_window)
         trial_events = get_recent_trial_states(animal_id, session, time_window)
-        # Format data for response - ensure all values are JSON serializable
+
+        # Format response - ensure all values are JSON serializable
         formatted_data = {
-            "lick_events": [],
-            "proximity_events": [],
             "control_data": {},
+            "events": {},
             "trial_events": [],
-            "lick_ports": lick_ports,
-            "proximity_ports": proximity_ports,
         }
 
         # Convert control_data to ensure all values are JSON serializable
         for key, value in control_data.items():
-            # Handle datetime objects
             if hasattr(value, "isoformat"):
                 formatted_data["control_data"][key] = value.isoformat()
-            # Handle timedelta objects
             elif hasattr(value, "total_seconds"):
                 formatted_data["control_data"][key] = value.total_seconds()
             else:
                 formatted_data["control_data"][key] = value
 
-        # Process lick events
-        for port, events in lick_events.items():
-            for event in events:
-                formatted_data["lick_events"].append(
-                    {
-                        "port": port,
-                        "time": event["real_time"].isoformat(),
-                        "ms_time": event["time"],
-                    }
-                )
+        # Format event data by type
+        for event_type, events in all_events.items():
+            events_list = []
 
-        # Process proximity events
-        for port, events in proximity_events.items():
             for event in events:
-                formatted_data["proximity_events"].append(
-                    {
-                        "port": port,
-                        "time": event["real_time"].isoformat(),
-                        "ms_time": event["time"],
-                        "in_position": event.get("in_position", False),
-                    }
-                )
+                event_formatted = {
+                    "port": event.get("port"),
+                    "time": event["real_time"].isoformat(),
+                    "ms_time": event["time"],
+                }
 
+                # Include all additional fields (e.g., in_position, press_duration, etc.)
+                for key in event:
+                    if key not in ["port", "time", "real_time", "ms_time", "animal_id", "session"]:
+                        event_formatted[key] = event[key]
+
+                events_list.append(event_formatted)
+
+            formatted_data["events"][event_type] = events_list
+
+        # Format trial events
         for trial_idx, events in trial_events.items():
             for event in events:
                 formatted_data["trial_events"].append(
@@ -804,7 +779,7 @@ def get_activity_data():
                         "trial_idx": trial_idx,
                     }
                 )
-        # print("formatted_data ", formatted_data)
+
         return jsonify(formatted_data)
 
     except Exception as e:

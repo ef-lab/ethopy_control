@@ -130,12 +130,35 @@
     let updateActive = true;
     let currentSetup = '';
     let currentTimeWindow = '60';
-    let autoRefreshStartTime = null; // Add this at the top with other let declarations
-    
+    let autoRefreshStartTime = null;
+
+    // Generate color from event type name using hash function
+    function stringToColor(str) {
+        let hash = 0;
+        for (let i = 0; i < str.length; i++) {
+            hash = str.charCodeAt(i) + ((hash << 5) - hash);
+        }
+
+        // Generate color in HSL space for better distribution
+        const hue = Math.abs(hash) % 360;
+        const saturation = 65 + (Math.abs(hash) % 20); // 65-85%
+        const lightness = 45 + (Math.abs(hash >> 8) % 15); // 45-60%
+
+        return `hsl(${hue}, ${saturation}%, ${lightness}%)`;
+    }
+
+    // Generate marker from event type name
+    function stringToMarker(str) {
+        const markers = ['circle', 'square', 'diamond', 'triangle-up', 'triangle-down',
+                        'star', 'hexagon', 'cross', 'x', 'pentagon'];
+        const index = Math.abs(str.split('').reduce((a, b) => a + b.charCodeAt(0), 0)) % markers.length;
+        return markers[index];
+    }
+
     // Format time since last ping
     function formatTimeSince(seconds) {
         if (seconds === null || isNaN(seconds)) return 'Unknown';
-        
+
         if (seconds < 60) {
             return `${Math.floor(seconds)}s ago`;
         } else if (seconds < 3600) {
@@ -148,11 +171,11 @@
             return `${hours}h ${minutes}m ago`;
         }
     }
-    
+
 // Update session info panel
     function updateSessionInfo(data) {
         const controlData = data.control_data || {};
-        
+
         // Update the session info panel
         $('#animalId').text(controlData.animal_id !== undefined ? controlData.animal_id : '-');
         $('#sessionNumber').text(controlData.session !== undefined ? controlData.session : '-');
@@ -161,128 +184,109 @@
         $('#trialCount').text(controlData.trials !== undefined ? controlData.trials : '-');
         $('#totalLiquid').text(controlData.total_liquid !== undefined ? `${controlData.total_liquid} μL` : '-');
         $('#difficulty').text(controlData.difficulty !== undefined ? controlData.difficulty : '-');
-        
+
         const lastPingSeconds = controlData.last_ping_seconds;
         $('#lastPing').text(lastPingSeconds !== undefined ? formatTimeSince(lastPingSeconds) : '-');
-        
+
         // Update plot title
         let title = `Activity Monitor - Setup: ${currentSetup}`;
         if (controlData.state) title += ` - State: ${controlData.state}`;
         if (controlData.status) title += ` - Status: ${controlData.status}`;
         $('#plotTitle').text(title);
     }
-    
+
     // Create or update the plot with new data
     function updatePlot(data) {
-        if (!data) return;
-        
+        if (!data || !data.events) return;
+
         // Update session info
         updateSessionInfo(data);
-        
-        // Extract all ports for y-axis
+
+        // Collect all ports from all event types
         const allPorts = new Set();
-        data.lick_events.forEach(event => allPorts.add(`lick_${event.port}`));
-        data.proximity_events.forEach(event => allPorts.add(`proximity_${event.port}`));
-        
+        for (const [eventType, events] of Object.entries(data.events)) {
+            events.forEach(event => allPorts.add(`${eventType}_${event.port}`));
+        }
+
         // Create sorted list of ports for consistent y-positions
         const sortedPorts = Array.from(allPorts).sort();
         const portPositions = {};
         sortedPorts.forEach((port, index) => {
             portPositions[port] = index + 1;
         });
-        
-        // Prepare data for lick events
-        const lickTimes = [];
-        const lickPositions = [];
-        const lickTexts = [];
-        
-        data.lick_events.forEach(event => {
-            lickTimes.push(new Date(event.time));
-            lickPositions.push(portPositions[`lick_${event.port}`]);
-            lickTexts.push(`Lick Port ${event.port}`);
-        });
-        
-        // Prepare data for proximity events
-        const proximityTimes = [];
-        const proximityPositions = [];
-        const proximityTexts = [];
-        const proximityColors = [];
-        const inPositionValues = [];
-        
-        data.proximity_events.forEach(event => {
-            proximityTimes.push(new Date(event.time));
-            proximityPositions.push(portPositions[`proximity_${event.port}`]);
-            proximityTexts.push(`Proximity Port ${event.port}`);
-            proximityColors.push(event.in_position ? '#009E73' : '#D55E00'); // Bluish green and Vermillion
-            inPositionValues.push(event.in_position ? 'Yes' : 'No');
-        });
-        
+
+        // Collect all event times for time range calculation
+        const allEventTimes = [];
+        for (const events of Object.values(data.events)) {
+            allEventTimes.push(...events.map(e => new Date(e.time)));
+        }
+
         // Calculate time range for x-axis
         const currentTime = new Date();
         let xStart, xEnd;
-        
+
         if (currentTimeWindow !== 'all') {
             const secondsWindow = parseInt(currentTimeWindow);
             xStart = new Date(currentTime - secondsWindow * 1000);
             xEnd = new Date(currentTime.getTime() + 2000); // add 2 seconds buffer
         } else {
             // Use the actual data range if showing all data
-            const allTimes = [...lickTimes, ...proximityTimes];
-            if (allTimes.length > 0) {
-                xStart = new Date(Math.min(...allTimes) - 5000); // 5 seconds before first event
-                xEnd = new Date(Math.max(...allTimes) + 5000); // 5 seconds after last event
+            if (allEventTimes.length > 0) {
+                xStart = new Date(Math.min(...allEventTimes) - 5000); // 5 seconds before first event
+                xEnd = new Date(Math.max(...allEventTimes) + 5000); // 5 seconds after last event
             } else {
                 xStart = new Date(currentTime - 60000); // default to last 60 seconds
                 xEnd = currentTime;
             }
         }
-        
+
         // Create the tick values and labels for the y-axis
         const tickVals = Object.values(portPositions);
         const tickText = Object.keys(portPositions).map(port => {
             const [type, num] = port.split('_');
             return `${type.charAt(0).toUpperCase() + type.slice(1)} Port ${num}`;
         });
-        
+
         // Create the plot traces
         const traces = [];
-        
-        // Add lick events trace
-        if (lickTimes.length > 0) {
-            traces.push({
-                x: lickTimes,
-                y: lickPositions,
-                mode: 'markers',
-                type: 'scatter',
-                name: 'Lick Events',
-                marker: {
-                    symbol: 'circle',
-                    size: 12,
-                    color: 'blue',
-                    opacity: 0.5
-                },
-                text: lickTexts,
-                hovertemplate: '%{text}<br>Time: %{x}<extra></extra>'
+
+        // Add traces for each event type dynamically
+        for (const [eventType, events] of Object.entries(data.events)) {
+            if (events.length === 0) continue;
+
+            const times = [];
+            const positions = [];
+            const texts = [];
+            const colors = [];
+
+            events.forEach(event => {
+                times.push(new Date(event.time));
+                positions.push(portPositions[`${eventType}_${event.port}`]);
+                texts.push(`${eventType.charAt(0).toUpperCase() + eventType.slice(1)} Port ${event.port}`);
+
+                // Special handling: if event has 'in_position' field, use it for coloring
+                if ('in_position' in event) {
+                    colors.push(event.in_position ? '#009E73' : '#D55E00');
+                }
             });
-        }
-        
-        // Add proximity events trace
-        if (proximityTimes.length > 0) {
+
+            const eventColor = colors.length > 0 ? colors : stringToColor(eventType);
+            const eventMarker = stringToMarker(eventType);
+
             traces.push({
-                x: proximityTimes,
-                y: proximityPositions,
+                x: times,
+                y: positions,
                 mode: 'markers',
                 type: 'scatter',
-                name: 'Proximity Events',
+                name: eventType.charAt(0).toUpperCase() + eventType.slice(1),
                 marker: {
-                    symbol: 'square',
+                    symbol: eventMarker,
                     size: 12,
-                    color: proximityColors,
-                    opacity: 0.5
+                    color: eventColor,
+                    opacity: 0.6
                 },
-                text: proximityTexts,
-                customdata: inPositionValues,
-                hovertemplate: '%{text}<br>Time: %{x}<br>In Position: %{customdata}<extra></extra>'
+                text: texts,
+                hovertemplate: '%{text}<br>Time: %{x}<extra></extra>'
             });
         }
         

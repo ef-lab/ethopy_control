@@ -1,140 +1,189 @@
-# Real-time Activity Monitor
+# Real-Time Activity Monitor
 
-The Real-time Activity Monitor is a feature that allows users to visualize and track animal activity in experimental setups in real-time. It displays lick events and proximity events on an interactive timeline plot.
+The Activity Monitor provides a **real-time overview of behavioral events** during experimental sessions. It visualizes all configured behavior types - actions performed by the subject such as licks, lever presses, nose pokes, and touches.
 
-## Overview
+## Features
 
-The activity monitor was integrated from a standalone Dash application into the main Flask-based web application. It provides:
+- **Session overview** - Quick glance at all subject behaviors during a session
+- **Auto-discovery** - Automatically detects all behavior types from database
+- **Real-time updates** - 1-second refresh rate for live monitoring
+- **Time windows** - View last 30s, 60s, 5m, or all data
+- **Session info** - Animal ID, session number, trial count, state, etc.
+- **Trial markers** - Vertical lines showing trial start times
+- **Extensible** - Add custom behavior types without code changes
 
-- Real-time visualization of lick and proximity sensor events
-- Session information display (animal ID, session number, trial state, etc.)
-- Configurable time windows (30s, 60s, 5m, or all data)
-- Color-coded events for better visibility and accessibility
+**What are behavior events?** Actions performed by the subject (mouse/rat) such as:
+- Licks, lever presses, nose pokes, touches, proximity entries
 
-## Architecture
+See [Custom Event Types](custom_event_types.md) to track additional behaviors.
 
-### Components
+## Using the Activity Monitor
 
-The activity monitor feature consists of several key components:
+### Accessing the Monitor
 
-1. **Flask Route** (`/activity-monitor`)
-   - Defined in `app.py`
-   - Renders the activity monitor template
-   - Provides session information to the template
+Navigate to **Activity Monitor** from the main menu, or go to `/activity-monitor`.
 
-2. **API Endpoint** (`/api/activity-data`)
-   - Defined in `app.py`
-   - Returns JSON data for plotting
-   - Fetches and formats database information
+### Controls
 
-3. **HTML Template** (`templates/activity_monitor.html`)
-   - Extends the base template
-   - Contains the plot configuration and JavaScript code
-   - Handles user interactions and plot updates
+**Setup Selector** - Choose which experimental setup to monitor
 
-4. **Backend Data Access** (`real_time_plot/get_activity.py`)
-   - Contains database query functions
-   - Provides data to the Flask routes
-   - Handles database connections
+**Time Window**:
+- `30s` - Last 30 seconds
+- `60s` - Last 60 seconds (default)
+- `5m` - Last 5 minutes
+- `All` - All data from session start
 
-5. **Legacy Standalone Application** (`real_time_plot/real_time_events.py`)
-   - Original Dash application (not used in the integrated version)
-   - Kept for reference and standalone usage
+**Update Controls**:
+- `Start` - Begin auto-refresh (updates every second)
+- `Stop` - Pause auto-refresh
+- `Refresh` - Manual refresh
+
+**Note**: Auto-refresh automatically stops after 5 minutes to prevent excessive database queries.
+
+### Session Information Panel
+
+Displays current session details:
+- Animal ID
+- Session number
+- Current state (e.g., trial, ITI)
+- Status (ready, running, stop)
+- Trial count
+- Total liquid delivered
+- Difficulty level
+- Last ping time
+
+### Plot Display
+
+The plot shows a **session overview** of all subject behaviors:
+- **Y-axis**: Port numbers grouped by behavior type
+- **X-axis**: Time (absolute timestamps)
+- **Markers**: Behavior events (color and shape based on type)
+- **Vertical lines**: Trial start times (gray)
+
+This gives you an instant view of what the subject did throughout the session.
+
+**Interactivity**:
+- Zoom: Click and drag
+- Pan: Shift + click and drag
+- Reset: Double-click
+- Hover: See event details
+
+## How It Works
 
 ### Data Flow
 
-1. User visits the `/activity-monitor` page
-2. Frontend JavaScript makes AJAX requests to `/api/activity-data`
-3. The API endpoint fetches data from the database using functions in `get_activity.py`
-4. Data is formatted and returned as JSON
-5. The frontend JavaScript processes this data and updates the Plotly chart
-6. Auto-refresh occurs at regular intervals (1 second by default)
+1. Frontend requests `/api/activity-data?setup=X&time_window=60`
+2. Backend queries `#control` table for animal_id and session
+3. Backend queries `configuration__port` to discover configured event types
+4. Backend queries each `activity__<type>` table for event data
+5. Backend returns JSON with all events grouped by type
+6. Frontend generates plot with auto-assigned colors/markers
 
-## Database Integration
+### Convention-Based Discovery
 
-The activity monitor accesses the database using a hybrid approach:
+The system automatically discovers event types by:
 
-- When running within the Flask application, it uses the Flask-SQLAlchemy ORM
-- When running standalone, it uses direct SQLAlchemy connections
-- The `use_flask_db_if_available()` function detects which context is active
+1. Reading port configurations from `configuration__port`
+2. Looking for corresponding `activity__<type>` tables
+3. Querying event data for the current session
+4. Auto-generating colors and markers from type names
 
-### Database Tables Used
+### Database Tables
 
-- `#control`: For session information and setup details
-- `activity__lick`: For lick event data
-- `session`: For session timestamps
-- `configuration__port`: For port configuration information
+- `#control` - Session info and setup details
+- `configuration__port` - Port configs (defines which behavior types exist)
+- `activity__lick`, `activity__lever`, etc. - Behavior event data tables
+- `session` - Session timestamps
+- `trial` - Trial state events
 
-## Frontend Implementation
+**Note:** Only subject behaviors are tracked (licks, presses, pokes).
 
-The frontend uses:
+## Customization
 
-- **Plotly.js**: For interactive data visualization
-- **jQuery**: For DOM manipulation and AJAX requests
-- **Bootstrap**: For responsive layout and styling
+### Adding Behavior Types
 
-### Plot Configuration
+Track additional subject behaviors without code changes! See [Custom Event Types](custom_event_types.md).
 
-The plot displays:
+Examples: lever presses, nose pokes, touch screen interactions, wheel turns, etc.
 
-- Lick events as blue circles
-- Proximity events as squares
-  - In-position events in Bluish Green (`#009E73`)
-  - Not-in-position events in Vermillion (`#D55E00`)
+### Modifying Plot Appearance
 
-## Making Changes
+Edit `templates/activity_monitor.html`:
 
-### Modifying the Plot
-
-To change the plot appearance or behavior:
-
-1. Edit `templates/activity_monitor.html`
-2. Look for the `updatePlot()` function (around line 170)
-3. Modify the trace definitions or layout as needed
-4. For color changes, update the color values in:
-   - The `proximityColors` array
-   - The `showNotification` function's `backgroundColor` property
-
-Example of changing colors:
-
+**Change auto-refresh interval** (line ~406):
 ```javascript
-// Change proximity event colors
-proximityColors.push(event.in_position ? '#009E73' : '#D55E00'); // Bluish green and Vermillion
-
-// Change notification colors
-backgroundColor: type === 'success' ? '#009E73' : '#D55E00', // Bluish green and Vermillion
+setInterval(function() {
+    fetchActivityData();
+}, 1000);  // Change 1000 to desired milliseconds
 ```
 
-### Adding New Data Sources
-
-To add a new type of event data:
-
-1. Add a query function in `real_time_plot/get_activity.py`
-2. Update the API endpoint in `app.py` to include this data
-3. Modify the frontend code in `activity_monitor.html` to display the new data
-
-### Modifying the Layout
-
-To change the page layout:
-
-1. Edit `templates/activity_monitor.html`
-2. Modify the HTML structure within the `{% block content %}` section
-
-## Testing Changes
-
-To test changes to the activity monitor:
-
-1. Run the application in development mode: `python app.py`
-2. Navigate to `/activity-monitor`
-3. Use your browser's developer tools to debug JavaScript
-4. Check the Python console for backend errors
-
-## Standalone Mode (Legacy)
-
-The original standalone Dash application can still be run:
-
-```bash
-python real_time_plot/real_time_events.py
+**Modify plot layout** (line ~336):
+```javascript
+const layout = {
+    xaxis: {title: 'Time'},
+    yaxis: {title: 'Port'},
+    height: 400,  // Change plot height
+    // ... add more layout options
+};
 ```
 
-This will start a Dash server on port 8050. Note that it uses the same database functions from `get_activity.py` but operates independently from the Flask application. 
+**Custom colors/markers** - Edit hash functions (lines 136-156) or create custom plot page.
+
+### Creating Custom Analysis Plots
+
+The Activity Monitor is for **quick session overview**. For detailed behavioral analysis (histograms, heatmaps, statistics), create custom plot pages.
+
+See [Custom Event Types - Creating Custom Plots](custom_event_types.md#creating-custom-analysis-plots).
+
+## Troubleshooting
+
+### No Behaviors Showing
+
+1. Verify time window includes behaviors
+2. Verify database tables exist
+5. Ensure subject actually performed behaviors during session
+
+### Plot Not Updating
+
+1. Click "Start" to enable auto-refresh
+2. Check "Last Ping" time in session info
+3. Verify setup is actively running
+4. Check browser console for AJAX errors
+
+### Wrong Behavior Types Displayed
+
+1. Check `configuration__port` table for correct port configs
+2. Verify `activity__<type>` tables exist for your behaviors
+3. Check table naming: `activity__` prefix with two underscores
+4. Remember: Only track subject behaviors, not stimuli (no tone/LED tables)
+
+## API Reference
+
+### GET `/api/activity-data`
+
+**Parameters:**
+- `setup` (required) - Setup identifier
+- `time_window` (optional) - Seconds to look back, or "all" (default: 60)
+
+**Response:**
+```json
+{
+  "control_data": {
+    "animal_id": "mouse123",
+    "session": 1,
+    "status": "running",
+    "state": "trial",
+    "trials": 42,
+    "total_liquid": 150,
+    "difficulty": 3,
+    "last_ping_seconds": 5.2
+  },
+  "events": {
+    "lick": [{"port": 1, "time": "2024-01-13T10:30:15.123Z", "ms_time": 1000}],
+    ...
+  },
+  "trial_events": [
+    {"trial_idx": 1, "time": "2024-01-13T10:30:10.000Z", "ms_time": 0}
+  ]
+}
+```

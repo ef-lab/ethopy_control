@@ -29,8 +29,10 @@ nav:
   - Getting Started:
     - Setup Guide: setup.md
     - User Management: user_management.md
-    - Monitoring and Control: monitoring.md  
+    - Monitoring and Control: monitoring.md
+  - Real-Time Plotting:
     - Activity Monitor: activity_monitor.md
+    - Custom Event Types: custom_event_types.md
   - API Reference:
     - Endpoints: api/endpoints.md
     - Models: api/models.md

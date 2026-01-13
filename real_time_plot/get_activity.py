@@ -75,7 +75,7 @@ class DatabaseConfig:
             Database configuration dictionary
         """
         app_config = get_config()
-        print("Database host ",  app_config.DB_HOST)
+        print("Database host ", app_config.DB_HOST)
         # Get database parameters from the main app config
         config = {
             "host": app_config.DB_HOST,
@@ -650,3 +650,128 @@ def get_recent_trial_states(
     except Exception as err:
         print(f"Database error when querying recent trial states: {err}")
         return {}
+
+
+def get_events_auto(
+    animal_id: str, session: int, seconds: Optional[int]
+) -> Dict[str, List[Dict[str, Any]]]:
+    """
+    Auto-discover and fetch all event types for a session.
+
+    Convention: All activity tables named 'activity__*' with columns (animal_id, session, port, time).
+    The function queries configuration__port to discover which event types are configured,
+    then automatically fetches data from the corresponding activity__ tables.
+
+    Args:
+        animal_id: The animal identifier
+        session: The session number
+        seconds: Number of seconds to look back (None for all)
+
+    Returns:
+        Dictionary mapping event types to lists of events
+        Format: {
+            'lick': [{port: 1, time: datetime, ...}, ...],
+            'proximity': [{port: 1, time: datetime, in_position: True, ...}, ...],
+            'lever': [{port: 1, time: datetime, ...}, ...],
+            ...
+        }
+    """
+    if not animal_id or session is None:
+        return {}
+
+    # Get session start time
+    session_start = get_session_timestamp(animal_id, session)
+    if not session_start:
+        print(
+            f"Could not get session start time for animal {animal_id}, session {session}"
+        )
+        return {}
+
+    if seconds is None:
+        seconds = (datetime.now() - session_start).total_seconds()
+
+    # Calculate time window in milliseconds
+    time_window_ms = get_time_window_ms(session_start, seconds)
+
+    # Get configured port types for this session
+    port_configs = get_port_config_types(animal_id, session)
+    if not port_configs:
+        print(f"No port configurations found for animal {animal_id}, session {session}")
+        return {}
+
+    # Group ports by event type
+    event_types = {}
+    for config_type, port in port_configs:
+        event_type = config_type.lower()
+        if event_type not in event_types:
+            event_types[event_type] = []
+        event_types[event_type].append(port)
+
+    # Fetch data for each event type
+    all_events = {}
+
+    with get_db_session() as db_session:
+        for event_type, ports in event_types.items():
+            # Construct table name following convention
+            table_name = f"activity__{event_type}"
+
+            # Check if table exists
+            table_check = text("""
+                SELECT 1
+                FROM information_schema.tables
+                WHERE table_schema = 'lab_behavior'
+                AND table_name = :table_name
+                LIMIT 1
+            """)
+
+            table_exists = db_session.execute(
+                table_check, {"table_name": table_name}
+            ).scalar()
+
+            if not table_exists:
+                print(
+                    f"Table {table_name} does not exist in lab_behavior schema, skipping"
+                )
+                continue
+
+            # Build query for this event type
+            port_list = ",".join(str(p) for p in ports)
+            query_text = f"""
+                SELECT *
+                FROM {table_name}
+                WHERE animal_id = :animal_id
+                AND session = :session
+                AND time >= :time_window
+                AND port IN ({port_list})
+                ORDER BY port, time
+            """
+
+            try:
+                result = db_session.execute(
+                    text(query_text),
+                    {
+                        "animal_id": animal_id,
+                        "session": session,
+                        "time_window": time_window_ms,
+                    },
+                )
+
+                # Process events
+                events = []
+                for row in result:
+                    event = dict(row._mapping)
+                    # Convert ms time to real datetime
+                    event["real_time"] = convert_ms_to_datetime(
+                        session_start, event["time"]
+                    )
+                    events.append(event)
+
+                if events:
+                    all_events[event_type] = events
+                    print(f"Found {len(events)} {event_type} events")
+
+            except Exception as err:
+                print(f"Error querying {table_name}: {err}")
+                continue
+
+    return all_events
