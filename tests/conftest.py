@@ -37,9 +37,26 @@ def test_app():
             f"Tests must use in-memory SQLite, got: {db_uri}"
         )
 
+        # Assert on the ENGINE, not just the config above. The config value is
+        # what we ASKED for; db.engine.url is what create_all/drop_all actually
+        # operate on. If an engine had already been built from another URI, the
+        # config check would pass while the engine still pointed at a real
+        # database. #control and #task are mapped models, so drop_all() on the
+        # production server would drop the live experiment tables.
+        engine_url = str(db.engine.url)
+        assert engine_url == "sqlite:///:memory:", (
+            f"REFUSING TO RUN: tests are bound to {engine_url}, not in-memory "
+            "SQLite. db.drop_all() below would DROP the #control and #task tables."
+        )
+
         db.create_all()
         yield app
         db.session.remove()
+        # Drop tables between tests. `app` is a module-level singleton, so the
+        # in-memory SQLite engine is reused across the whole session; without
+        # this, rows created by one test's fixtures collide with the next
+        # test's inserts (UNIQUE constraint failed: #control.setup).
+        db.drop_all()
 
 
 @pytest.fixture

@@ -1,0 +1,34 @@
+# --- Secrets: MUST stay out of the image ---------------------------------
+# The real .env holds live DB/LDAP credentials. It is injected at RUNTIME
+# by docker-compose (env_file:), never baked into the image.
+.env
+*.env
+
+# --- Build context bloat --------------------------------------------------
+# build/ contains a pathological build/lib/build/lib/... nest ~6 levels deep.
+# Uploading it to the Docker daemon slows every single build.
+build/
+dist/
+*.egg-info/
+.venv/
+venv/
+ENV/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+
+# --- Not needed at runtime ------------------------------------------------
+# NOTE: tests/ is deliberately NOT excluded. It is the built-in self-check:
+#   docker compose run --rm web python -m pytest -q
+# It uses in-memory SQLite, so it proves the image works with no database.
+.git/
+.github/
+docs/
+site/
+mkdocs.yml
+*.log
+.DS_Store
+.vscode/

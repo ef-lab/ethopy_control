@@ -6,8 +6,12 @@ from models import ControlTable
 
 
 @pytest.fixture
-def ldap_test_app():
-    """Test application fixture specifically for LDAP testing."""
+def ldap_test_app(test_app):
+    """Test application fixture specifically for LDAP testing.
+
+    Depends on test_app so the in-memory tables exist: a successful LDAP login
+    redirects to the index view, which queries ControlTable.
+    """
     # Override config for LDAP tests
     app.config["USE_LDAP_AUTH"] = True
     app.config["USE_LOCAL_AUTH"] = False

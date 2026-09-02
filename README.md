@@ -6,7 +6,20 @@ A Flask-based application for managing laboratory experiments and device control
 
 👉 [Documentation](https://ef-lab.github.io/ethopy_control/)
 
-## Quick Start
+## Deploying / running it
+
+To **run** the app (rather than develop it), use Docker — no Python setup needed
+on the target machine:
+
+```bash
+docker compose up -d      # then open http://localhost:8000
+```
+
+👉 **[DEPLOY.md](DEPLOY.md)** — deploying on a new computer, automatic restart
+after crashes and reboots, reading logs, updating, credential handover, and a
+non-Docker fallback.
+
+## Quick Start (development)
 
 1. **Clone the repository:**
 ```bash

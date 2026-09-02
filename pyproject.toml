@@ -31,6 +31,14 @@ dependencies = [
     "flask-sqlalchemy>=3.1.1",
     "flask-ldap3-login>=0.9.16",
     "werkzeug>=3.0.0",
+
+    # Brute-force protection on /login. Without it, the login form is an
+    # unthrottled gateway to the LDAP directory, which has an account lockout
+    # policy - so anyone could lock out every lab account.
+    #
+    # No [redis] extra: counters live in worker memory. Install
+    # flask-limiter[redis] only if you add a shared store - see app.py.
+    "flask-limiter>=3.5.0",
     
     # Database
     "sqlalchemy>=2.0.38",
