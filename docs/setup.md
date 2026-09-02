@@ -60,7 +60,7 @@ This interactive script will:
 python3 main.py
 ```
 
-The application will be available at `http://localhost:5000`.
+The application will be available at `http://localhost:8000` (the default `PORT`).
 
 ## Project Structure
 ```
@@ -175,7 +175,7 @@ python real_time_events.py
 
 Access the real-time plots at `http://localhost:8050`.
 
-## Production Deployment
+## "Production" Deployment
 
 ### Using Gunicorn
 
@@ -184,220 +184,29 @@ Access the real-time plots at `http://localhost:8050`.
 pip install .
 
 # Run with multiple workers
-gunicorn -w 4 -b 0.0.0.0:5000 main:app
+gunicorn -w 4 -b 0.0.0.0:8000 --timeout 60 main:app
 ```
 
-### Docker Deployment (Optional)
+### Docker Deployment (Recommended)
 
-<details>
-<summary>Click to expand Docker deployment instructions</summary>
-
-#### Multi-stage Production Dockerfile
-
-Create a `Dockerfile`:
-```dockerfile
-# Multi-stage build for optimal image size
-FROM python:3.11-slim as builder
-
-# Install build dependencies
-RUN apt-get update && apt-get install -y \
-    build-essential \
-    gcc \
-    && rm -rf /var/lib/apt/lists/*
-
-# Set working directory
-WORKDIR /app
-
-# Copy only requirements first to leverage Docker layer caching
-COPY pyproject.toml ./
-RUN pip install --no-cache-dir --user .
-
-# Production stage
-FROM python:3.11-slim
-
-# Install runtime dependencies
-RUN apt-get update && apt-get install -y \
-    mysql-client \
-    && rm -rf /var/lib/apt/lists/*
-
-# Create non-root user for security
-RUN useradd --create-home --shell /bin/bash appuser
-
-# Set working directory
-WORKDIR /app
-
-# Copy Python packages from builder stage
-COPY --from=builder /root/.local /home/appuser/.local
-
-# Copy application code
-COPY . .
-
-# Change ownership to non-root user
-RUN chown -R appuser:appuser /app
-
-# Switch to non-root user
-USER appuser
-
-# Add local bin to PATH
-ENV PATH=/home/appuser/.local/bin:$PATH
-
-# Expose port
-EXPOSE 5000
-
-# Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost:5000/ || exit 1
-
-# Run the application
-CMD ["python3", "main.py"]
-```
-
-#### Development Dockerfile
-
-For development purposes, create a `Dockerfile.dev`:
-```dockerfile
-FROM python:3.11-slim
-
-# Install development dependencies
-RUN apt-get update && apt-get install -y \
-    build-essential \
-    gcc \
-    mysql-client \
-    curl \
-    && rm -rf /var/lib/apt/lists/*
-
-# Set working directory
-WORKDIR /app
-
-# Copy project files
-COPY pyproject.toml ./
-RUN pip install --no-cache-dir -e .[dev]
-
-# Copy application code
-COPY . .
-
-# Expose port
-EXPOSE 5000
-
-# Run in development mode
-CMD ["python3", "main.py"]
-```
-
-#### Docker Compose Setup
-
-Create a `docker-compose.yml` for complete development environment:
-```yaml
-version: '3.8'
-
-services:
-  app:
-    build:
-      context: .
-      dockerfile: Dockerfile.dev
-    ports:
-      - "5000:5000"
-    environment:
-      - FLASK_CONFIG=development
-      - DB_HOST=mysql
-      - DB_PORT=3306
-      - DB_NAME=lab_experiments
-      - DB_USER=sqlcontrol
-      - DB_PASSWORD=password
-      - SECRET_KEY=dev-secret-key-change-in-production
-      - SSH_USERNAME=admin
-      - SSH_PASSWORD=admin
-      - ADMIN_USERNAME=admin
-      - ADMIN_PASSWORD=admin
-      - USE_LOCAL_AUTH=true
-    depends_on:
-      - mysql
-    volumes:
-      - .:/app
-      - /app/.venv  # Exclude venv from volume mount
-    command: python3 main.py
-
-  mysql:
-    image: mysql:8.0
-    environment:
-      - MYSQL_ROOT_PASSWORD=rootpassword
-      - MYSQL_DATABASE=lab_experiments
-      - MYSQL_USER=sqlcontrol
-      - MYSQL_PASSWORD=password
-    ports:
-      - "3306:3306"
-    volumes:
-      - mysql_data:/var/lib/mysql
-    command: --default-authentication-plugin=mysql_native_password
-
-volumes:
-  mysql_data:
-```
-
-#### Building and Running
+Docker is the supported way to deploy ethopy_control. It removes the need to
+install Python, create a virtualenv, or configure gunicorn on the target
+machine:
 
 ```bash
-# Build production image
-docker build -t ethopy-control .
-
-# Run production container
-docker run -d \
-  --name ethopy-control \
-  -p 5000:5000 \
-  -e SECRET_KEY="your-production-secret" \
-  -e DB_HOST="your-db-host" \
-  -e DB_USER="your-db-user" \
-  -e DB_PASSWORD="your-db-password" \
-  -e SSH_USERNAME="your-ssh-user" \
-  -e SSH_PASSWORD="your-ssh-password" \
-  -e ADMIN_USERNAME="admin" \
-  -e ADMIN_PASSWORD="your-admin-password" \
-  -e FLASK_CONFIG="production" \
-  ethopy-control
-
-# Run with Docker Compose (development)
-docker-compose up -d
-
-# View logs
-docker-compose logs -f app
-
-# Stop services
-docker-compose down
+docker compose up -d --build
 ```
 
-#### Environment Variables for Docker
+The image is built on the machine that runs it, straight from the `Dockerfile`
+in this repository — there is no registry to configure or keep in sync.
 
-Create a `.env.docker` file for container environment variables:
-```bash
-# Database Configuration
-DB_HOST=mysql
-DB_PORT=3306
-DB_NAME=lab_experiments
-DB_USER=ethopycontrol
-DB_PASSWORD=secure_password
+**See [DEPLOY.md](https://github.com/ef-lab/ethopy_control/blob/main/DEPLOY.md) for the full guide**, covering deployment on a
+new computer, automatic restart after crashes and reboots, log access,
+credential handover, and a non-Docker fallback.
 
-# Application Configuration
-SECRET_KEY=your-super-secret-key-for-production
-FLASK_CONFIG=production
-USE_LOCAL_AUTH=true
+The relevant files live at the repository root: `Dockerfile`,
+`docker-compose.yml`, `.dockerignore` and `.env.example`.
 
-# SSH Configuration
-SSH_USERNAME=your-ssh-username
-SSH_PASSWORD=your-ssh-password
-
-# Admin Configuration
-ADMIN_USERNAME=admin
-ADMIN_PASSWORD=secure-admin-password
-```
-
-**Security Notes for Docker:**
-- Never use default passwords in production
-- Use Docker secrets for sensitive data
-- Run containers as non-root user
-- Regularly update base images
-- Use multi-stage builds to reduce image size
-- Implement proper logging and monitoring
-
-</details>
 
 ### Security Considerations
 

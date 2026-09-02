@@ -30,6 +30,7 @@ nav:
     - Setup Guide: setup.md
     - User Management: user_management.md
     - Monitoring and Control: monitoring.md
+    - How Docker Works: docker.md
   - Real-Time Plotting:
     - Activity Monitor: activity_monitor.md
     - Custom Event Types: custom_event_types.md
@@ -40,3 +41,19 @@ nav:
     - Project Structure: development/project_structure.md
     - Testing: development/testing.md
     - Contributing: development/contributing.md
+
+markdown_extensions:
+  # Admonitions: the !!! note / warning / danger callouts in docker.md
+  - admonition
+  - pymdownx.details
+  - attr_list
+  - md_in_html
+  - tables
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  # Renders ```mermaid fences as diagrams instead of code blocks
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
