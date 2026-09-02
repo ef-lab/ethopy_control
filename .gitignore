@@ -122,3 +122,5 @@ ENV/
 
 # IDE settings
 .vscode/
+# Lab-specific notes: handed over directly, never committed (public repo)
+private/
