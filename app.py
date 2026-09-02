@@ -14,8 +14,11 @@ from flask import (
     url_for,
 )
 from flask_ldap3_login import AuthenticationResponseStatus, LDAP3LoginManager
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.orm import DeclarativeBase
+from werkzeug.middleware.proxy_fix import ProxyFix
 
 # Import configuration
 from utils.config import get_config
@@ -40,6 +43,71 @@ app.config.from_object(get_config())
 # Initialize extensions
 db.init_app(app)
 
+# Trust X-Forwarded-* only when explicitly told we sit behind a reverse proxy.
+# Without this, every request behind a proxy appears to come from the proxy's
+# own IP, so the login rate limit below would apply to all users collectively
+# instead of per client. Enabling it while directly exposed would instead let
+# clients spoof the header and bypass the limit, which is why it is opt-in.
+if app.config.get("TRUST_PROXY_HEADERS"):
+    app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
+    logger.info("Trusting X-Forwarded-* headers from a single upstream proxy")
+
+# Rate-limit counter storage. The default is per-worker memory, which needs no
+# extra service but means each gunicorn worker counts independently: with 4
+# workers the effective limit is roughly 4x the configured one. Tune the limits
+# in .env against your directory's lockout threshold to compensate.
+#
+# To make the limits exact, point RATELIMIT_STORAGE_URI at a shared store
+# (redis://...) and install the extra: pip install "flask-limiter[redis]".
+# If that store is unreachable - or the extra is missing - we degrade to memory
+# rather than refusing to start. A weaker limit beats no application at all.
+_storage_uri = app.config.get("RATELIMIT_STORAGE_URI", "memory://")
+if _storage_uri.startswith("redis"):
+    try:
+        import redis as _redis
+
+        _redis.from_url(_storage_uri, socket_connect_timeout=2).ping()
+        logger.info("Rate limiting backed by %s (shared across workers)", _storage_uri)
+    except Exception as exc:  # noqa: BLE001 - any failure means "fall back"
+        logger.warning(
+            "Rate-limit store %s unreachable (%s); falling back to per-worker "
+            "memory storage. Limits will be looser than configured.",
+            _storage_uri,
+            exc,
+        )
+        _storage_uri = "memory://"
+
+
+def _login_username_key():
+    """Rate-limit key based on the account being attempted, not the caller.
+
+    LDAP locks accounts individually, so an attacker rotating source addresses
+    could still lock one person out. Keying on the submitted username stops
+    that regardless of where the requests originate.
+    """
+    return (request.form.get("username") or "").strip().lower() or "anonymous"
+
+
+def _login_failed(response):
+    """Only count FAILED logins against the limit.
+
+    A failed login re-renders the form (200); a successful one redirects (302).
+    Counting only failures means normal users never consume their own quota.
+    """
+    return response.status_code == 200
+
+
+# Deliberately NO default limits: the control table and activity monitor poll
+# their API endpoints every few seconds, and a global limit would return 429 to
+# the normal UI. Only /login is limited, because only /login reaches LDAP.
+limiter = Limiter(
+    get_remote_address,
+    app=app,
+    default_limits=[],
+    storage_uri=_storage_uri,
+    strategy="fixed-window",
+)
+
 
 # Initialize LDAP if enabled
 ldap_manager = None
@@ -59,6 +127,19 @@ def login_required(f):
 
 
 @app.route("/login", methods=["GET", "POST"])
+@limiter.limit(
+    lambda: app.config["LOGIN_RATE_LIMIT_IP"],
+    methods=["POST"],
+    deduct_when=_login_failed,
+    error_message="Too many login attempts from this address. Please wait and try again.",
+)
+@limiter.limit(
+    lambda: app.config["LOGIN_RATE_LIMIT_USER"],
+    key_func=_login_username_key,
+    methods=["POST"],
+    deduct_when=_login_failed,
+    error_message="Too many failed attempts for this account. Please wait and try again.",
+)
 def login():
     error = None
 
@@ -88,6 +169,10 @@ def login():
                 user = User.query.filter_by(username=username).first()
                 if user and user.check_password(password):
                     logger.info(f"Local auth: User {username} logged in successfully")
+                    # permanent=True is what makes PERMANENT_SESSION_LIFETIME
+                    # apply; without it the cookie simply lasts until the
+                    # browser closes and never expires on its own.
+                    session.permanent = True
                     session["username"] = username
                     session["is_admin"] = user.is_admin
 
@@ -105,6 +190,7 @@ def login():
 
                 if response.status == AuthenticationResponseStatus.success:
                     logger.info(f"LDAP auth: User {username} logged in successfully")
+                    session.permanent = True
                     session["username"] = username
 
                     # Redirect to the next parameter or index

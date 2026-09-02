@@ -1,5 +1,7 @@
 import os
+from datetime import timedelta
 from pathlib import Path
+
 from dotenv import load_dotenv
 
 # Load environment variables from .env file if it exists
@@ -39,6 +41,66 @@ class Config:
 
     # Flask application settings
     PORT = int(os.environ.get("PORT", "8000"))
+
+    # --- Session cookie hardening ---------------------------------------
+    # HTTPONLY: JavaScript cannot read the session cookie, limiting the damage
+    #   of any cross-site scripting bug.
+    # SAMESITE "Lax": the cookie is not sent on cross-site POSTs, which blunts
+    #   cross-site request forgery even though CSRF tokens are not yet in place.
+    # SECURE: when true the browser only sends the cookie over HTTPS. It MUST
+    #   stay false while the app is served over plain HTTP, or nobody can log
+    #   in at all. Set SESSION_COOKIE_SECURE=true as soon as TLS is terminated
+    #   in front of the app.
+    SESSION_COOKIE_HTTPONLY = True
+    SESSION_COOKIE_SAMESITE = "Lax"
+    SESSION_COOKIE_SECURE = (
+        os.environ.get("SESSION_COOKIE_SECURE", "false").lower() == "true"
+    )
+    PERMANENT_SESSION_LIFETIME = timedelta(
+        hours=int(os.environ.get("SESSION_LIFETIME_HOURS", "12"))
+    )
+
+    # --- Brute-force protection -----------------------------------------
+    # Applied to POST /login only, and only FAILED attempts are counted, so a
+    # normal user logging in and out never consumes quota.
+    #
+    # Two independent limits, because they stop different attacks:
+    #
+    #  PER IP    - stops one host hammering the form. Kept generous because
+    #              several lab members may share one NAT'd public address; a
+    #              tight per-IP limit would throttle the whole lab at once.
+    #
+    #  PER USER  - the important one. LDAP locks accounts individually, so an
+    #              attacker rotating IPs could still lock out one person. This
+    #              is keyed on the submitted username instead, so it holds no
+    #              matter where the attempts come from.
+    #
+    # NOTE: both are counted PER WORKER. With no shared store and 4 gunicorn
+    # workers, the effective allowance is about 4x the value set here. Choose
+    # numbers so that (value x workers) stays BELOW the directory's lockout
+    # threshold, or the app will not stop an account being locked.
+    LOGIN_RATE_LIMIT_IP = os.environ.get(
+        "LOGIN_RATE_LIMIT_IP", "10 per minute; 60 per hour"
+    )
+    LOGIN_RATE_LIMIT_USER = os.environ.get(
+        "LOGIN_RATE_LIMIT_USER", "4 per 15 minutes; 10 per hour"
+    )
+
+    # Where the rate-limit counters live. The default "memory://" needs no
+    # extra service but keeps counts per worker process - see the note above.
+    # Pointing this at a shared store (redis://...) makes both limits exact;
+    # that also needs `pip install "flask-limiter[redis]"`. Falls back to
+    # memory automatically if the store is unreachable or the extra is absent.
+    RATELIMIT_STORAGE_URI = os.environ.get("RATELIMIT_STORAGE_URI", "memory://")
+
+    # Only enable behind a reverse proxy you control (nginx, Caddy, Cloudflare
+    # Tunnel, or an appliance). It makes Flask trust X-Forwarded-For so limiting
+    # sees the real client IP. If enabled while the app is directly reachable,
+    # clients can spoof that header and bypass the rate limit entirely - hence
+    # the default of false. See DEPLOY.md section 6.
+    TRUST_PROXY_HEADERS = (
+        os.environ.get("TRUST_PROXY_HEADERS", "false").lower() == "true"
+    )
 
     # Database URI
     SQLALCHEMY_DATABASE_URI = (
