@@ -1,0 +1,122 @@
+# =============================================================================
+# ethopy_control - deployment
+#
+#   Start:    docker compose up -d
+#   Stop:     docker compose down
+#   Logs:     docker compose logs -f
+#   Rebuild:  docker compose up -d --build
+#
+# See DEPLOY.md for full instructions.
+#
+# -----------------------------------------------------------------------------
+# THIS STACK SERVES PLAIN HTTP ON PORT 8000. THERE IS NO HTTPS HERE.
+#
+# That is deliberate. It makes the app work out of the box on any lab network
+# with no domain name, no certificates and no extra services to maintain.
+#
+# It also means passwords and session cookies cross the network unencrypted, so
+# this configuration is only appropriate on a TRUSTED LOCAL NETWORK.
+#
+# Do not port-forward this to the internet as-is. To publish it safely, put a
+# reverse proxy in front of it or reach it over a VPN. Both routes, and the two
+# environment variables below that must change when you do, are in DEPLOY.md
+# section 6.
+# -----------------------------------------------------------------------------
+# =============================================================================
+
+services:
+  web:
+    # Built from the Dockerfile in this directory. The repository is the single
+    # source of truth - there is no registry to publish to or pull from, and
+    # nothing external that can go stale.
+    #
+    #   first run / after a code change:  docker compose up -d --build
+    #   normal restart:                   docker compose up -d
+    build: .
+    image: ethopy_control:local
+
+    container_name: ethopy_control
+
+    # --- Recovery -----------------------------------------------------------
+    # unless-stopped: restart the container if it crashes, AND start it again
+    # automatically when the machine boots. It does NOT restart if someone
+    # deliberately ran `docker compose stop` - a manual stop stays stopped.
+    #
+    # Requires the Docker daemon to start at boot:  sudo systemctl enable docker
+    restart: unless-stopped
+
+    # --- Credentials --------------------------------------------------------
+    # Reads the real secrets from .env on the HOST at startup and injects them
+    # as environment variables. The file is never copied into the image
+    # (.dockerignore excludes it), so the built image contains no secrets.
+    #
+    # Copy .env.example to .env and fill it in. See DEPLOY.md.
+    env_file:
+      - .env
+
+    # --- Overrides ----------------------------------------------------------
+    # Values here beat anything in .env, so production settings cannot be
+    # undone by a stale .env left over from a developer machine.
+    environment:
+      # Turns OFF Flask debug mode. Without this, utils/config.py defaults to
+      # "development" and exposes the interactive Werkzeug debugger.
+      FLASK_CONFIG: production
+      # Pinned, and deliberately overriding whatever .env says. This is the port
+      # INSIDE the container, which must match the Dockerfile's gunicorn --bind
+      # and its HEALTHCHECK. To change the port you connect to, set HOST_PORT in
+      # .env instead - see the ports block below.
+      PORT: "8000"
+      # RATELIMIT_STORAGE_URI is deliberately NOT set, so login rate-limit
+      # counters live in each gunicorn worker's own memory.
+      #
+      # The consequence, stated plainly: with 4 workers the effective limit is
+      # about 4x the configured one, because attempts spread across processes
+      # that cannot see each other's counts. A limit of "4 per 15 minutes" lets
+      # through roughly 16.
+      #
+      # That is an accepted trade for keeping this to a single container. If
+      # your directory locks accounts after a small number of failures, either
+      # lower the limits in .env to compensate or reduce the worker count.
+      # FLASK_ENV is deliberately NOT set. Setting it to "development" makes
+      # app.py:65-75 accept ANY username and password. See DEPLOY.md.
+      #
+      # SESSION_COOKIE_SECURE and TRUST_PROXY_HEADERS are NOT set here either.
+      # They both default to false, which is correct for plain HTTP:
+      #
+      #   SESSION_COOKIE_SECURE=true stops the browser sending the session
+      #     cookie over anything but HTTPS. Turned on here, nobody could log in.
+      #
+      #   TRUST_PROXY_HEADERS=true makes the app believe the client IP claimed
+      #     in X-Forwarded-For. With no proxy in front, any client can forge
+      #     that header and walk straight past the login rate limit.
+      #
+      # Turn BOTH on at the same time, and only once a reverse proxy is
+      # terminating HTTPS in front of this container. See DEPLOY.md section 6.
+
+    # Read as  HOST_PORT : CONTAINER_PORT.  Only the left side can ever clash
+    # with something else on this machine, so only the left side is adjustable.
+    #
+    #   HOST_PORT      set it in .env if 8000 is taken. Defaults to 8000.
+    #   container port fixed at 8000 forever. Every container gets its own
+    #                  private network, so 8000 inside can never collide with
+    #                  anything - not even another copy of this app. It is also
+    #                  hardcoded in the Dockerfile's gunicorn command, EXPOSE
+    #                  and HEALTHCHECK, which is why it must not change here.
+    #
+    # Published on all interfaces, so the app is reachable from other machines
+    # on the local network at http://<this-machine-ip>:<HOST_PORT>. That is what
+    # makes it usable by the lab with no further setup, and it is also what a
+    # reverse proxy on another machine connects to.
+    #
+    # If you later put a proxy in front, restrict who may reach this port
+    # directly - otherwise the proxy can be bypassed along with its HTTPS and
+    # the real-client-IP rate limiting. DEPLOY.md section 6 has the rule.
+    ports:
+      - "${HOST_PORT:-8000}:8000"
+
+    # Keep container logs from filling the disk over months of running.
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
